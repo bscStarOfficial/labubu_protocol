@@ -143,8 +143,6 @@ contract LABUBU3 is ERC20, Ownable {
         // 早期入金限制
         require(nft.canDeposit(msg.sender), '!can');
 
-        require(maxAmount.sub(accountSales[msg.sender]) >= value, "The deposit limit has been reached");
-
         // 1e17
         if (value < minAmount || value > maxAmount || isContract(msg.sender) || value % 0.1 ether > 0) {
             safeTransferETH(msg.sender, value);
@@ -156,7 +154,9 @@ contract LABUBU3 is ERC20, Ownable {
             inviterChildList[defaultInviteAddress].add(msg.sender);
         }
 
-        accountSales[msg.sender] = accountSales[msg.sender].add(value);
+        accountSales[msg.sender] = accountSales[msg.sender] + value;
+        require(accountSales[msg.sender] <= maxAmount, "maxAmount");
+
         directTeamSales[inviter[msg.sender]] = directTeamSales[inviter[msg.sender]].add(value);
 
         addLiquidityUnlockTime[msg.sender] = block.timestamp;
