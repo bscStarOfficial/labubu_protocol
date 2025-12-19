@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./lib/SafeMath.sol";
 import "./interfaces/IPancake.sol";
 import "./interfaces/IWETH.sol";
+import "./interfaces/ILabubuNFT.sol";
 
 contract Distributor {
     constructor() {}
@@ -35,7 +36,7 @@ contract LABUBU3 is ERC20, Ownable {
     address public constant BLACK_ADDRESS = address(0xdEaD);
     address public bnbTokenAddress;
     IPancakeRouter02 public pancakeV2Router;
-    address public nft;
+    ILabubuNFT public nft;
     address public defaultInviteAddress; // 默认邀请人地址
     address public minter;
     address public deflationAddress; // 每日1%销毁地址
@@ -69,7 +70,7 @@ contract LABUBU3 is ERC20, Ownable {
         address _router,
         address _defaultInviteAddress,
         address _minter,
-        address _nft,
+        ILabubuNFT _nft,
         address _sellFeeAddress,
         address _deflationAddress
     ) ERC20("LABUBU 3.0", "LABUBU3") Ownable(msg.sender) {
@@ -114,37 +115,6 @@ contract LABUBU3 is ERC20, Ownable {
         _mint(_minter, 210000000000 * 10 ** decimals());
     }
 
-
-    function excludeFromFeeBatch(address[] calldata addrs, bool excluded) external onlyOwner {
-        for (uint256 i = 0; i < addrs.length; i++) {
-            isTaxExempt[addrs[i]] = excluded;
-        }
-    }
-
-
-    function blacklistBatch(address[] calldata addrs, bool blacklisted) external onlyOwner {
-        for (uint256 i = 0; i < addrs.length; i++) {
-            isBlacklisted[addrs[i]] = blacklisted;
-        }
-    }
-
-
-    event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
-
-    function withdrawEth(address recipient, uint256 value) external onlyOwner {
-        require(address(this).balance >= value, "Insufficient BNB");
-        payable(recipient).transfer(value);
-
-        emit WithdrawalToken(address(0x0), recipient, value);
-    }
-
-
-    function withdrawalToken(address token, address receiver, uint amount) external onlyOwner {
-        IERC20(token).transfer(receiver, amount);
-        emit WithdrawalToken(token, receiver, amount);
-    }
-
-
     receive() external payable {
         require(depositSwitch, "Deposit is not yet open");
 
@@ -167,8 +137,7 @@ contract LABUBU3 is ERC20, Ownable {
             return;
         } else if (value == 0.55 ether) {
             // TODO 得传地址，不能用tx.origin
-            (bool sent,) = payable(nft).call{gas: 2300 * 100, value: value}("");
-            require(sent, "Failed to send NFT");
+            nft.safeMint{value: value}(msg.sender);
             return;
         }
 
@@ -586,10 +555,9 @@ contract LABUBU3 is ERC20, Ownable {
 
         //NFT 10%
         uint256 nftAmount = 0;
-        if (nft != address(0)) {
+        if (address(nft) != address(0)) {
             nftAmount = _totalAmount.mul(1000).div(BASE_PERCENT);
-            (bool sent,) = payable(nft).call{gas: 2300 * 100, value: nftAmount}("");
-            require(sent, "Failed to send NFT");
+            nft.sendReward{value: nftAmount}();
         }
 
         // 剩余部分
@@ -675,8 +643,8 @@ contract LABUBU3 is ERC20, Ownable {
         lastTriggerTime = block.timestamp;
     }
 
-    function setMintNFTAddress(address account) external onlyOwner {
-        nft = account;
+    function setMintNFTAddress(ILabubuNFT _nft) external onlyOwner {
+        nft = _nft;
     }
 
     function setDeflationAddress(address _deflationAddress) external onlyOwner {
@@ -724,6 +692,36 @@ contract LABUBU3 is ERC20, Ownable {
 
     function setTriggerInterval(uint256 _tigger) external onlyOwner {
         TRIGGER_INTERVAL = _tigger;
+    }
+
+
+    function excludeFromFeeBatch(address[] calldata addrs, bool excluded) external onlyOwner {
+        for (uint256 i = 0; i < addrs.length; i++) {
+            isTaxExempt[addrs[i]] = excluded;
+        }
+    }
+
+
+    function blacklistBatch(address[] calldata addrs, bool blacklisted) external onlyOwner {
+        for (uint256 i = 0; i < addrs.length; i++) {
+            isBlacklisted[addrs[i]] = blacklisted;
+        }
+    }
+
+
+    event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
+
+    function withdrawEth(address recipient, uint256 value) external onlyOwner {
+        require(address(this).balance >= value, "Insufficient BNB");
+        payable(recipient).transfer(value);
+
+        emit WithdrawalToken(address(0x0), recipient, value);
+    }
+
+
+    function withdrawalToken(address token, address receiver, uint amount) external onlyOwner {
+        IERC20(token).transfer(receiver, amount);
+        emit WithdrawalToken(token, receiver, amount);
     }
 
     function setBurnRate(uint256[] calldata _burn) external onlyOwner {
