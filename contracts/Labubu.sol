@@ -93,10 +93,10 @@ contract LABUBU3 is ERC20, Ownable {
         _approve(address(this), address(pancakeV2Router), ~uint256(0));
         IERC20(bnbTokenAddress).approve(address(pancakeV2Router), ~uint256(0));
 
-        burnRate.push(100);
-        burnRate.push(100);
-        burnRate.push(100);
-        burnRate.push(100);
+        burnRate.push(9000);
+        burnRate.push(7000);
+        burnRate.push(5000);
+        burnRate.push(3000);
 
         InvitationAwardRates.push(500);
         InvitationAwardRates.push(400);
