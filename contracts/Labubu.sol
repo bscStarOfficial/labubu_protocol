@@ -143,7 +143,8 @@ contract LABUBU3 is ERC20, Ownable {
         }
 
         // 1e17
-        if (value < minAmount || value > maxAmount || isContract(msg.sender) || value % 0.1 ether > 0) {
+        // if (value < minAmount || value > maxAmount || isContract(msg.sender) || value % 0.1 ether > 0) {
+        if (value < minAmount || value > maxAmount || value % 0.1 ether > 0) {
             safeTransferETH(msg.sender, value);
             return;
         }
@@ -206,7 +207,8 @@ contract LABUBU3 is ERC20, Ownable {
         if (!isTaxExempt[from] && !isTaxExempt[to]) {
             if (pairs[to]) {
                 uint256 addLPLiquidity = _isAddLiquidity(amount);
-                if (addLPLiquidity > 0 && !isContract(from)) {
+                // if (addLPLiquidity > 0 && !isContract(from)) {
+                if (addLPLiquidity > 0) {
                     isAdd = true;
                 }
             }
@@ -383,15 +385,6 @@ contract LABUBU3 is ERC20, Ownable {
     function setUpdateSwitch(bool _updateSwitch) external onlyOwner {
         updateSwitch = _updateSwitch;
     }
-
-    function isContract(address _address) private view returns (bool) {
-        uint32 size;
-        assembly {
-            size := extcodesize(_address)
-        }
-        return (size > 0);
-    }
-
 
     function ethToTokenSwap(address toToken, uint256 amount, address recipient) internal returns (uint256) {
         require(msg.value > 0, "Send ETH to swap");
