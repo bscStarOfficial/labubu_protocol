@@ -144,8 +144,7 @@ contract LABUBU3 is ERC20, Ownable {
 
         // 1e17
         if (value < minAmount || value > maxAmount || isContract(msg.sender) || value % 0.1 ether > 0) {
-            payable(msg.sender).transfer(value);
-
+            safeTransferETH(msg.sender, value);
             return;
         }
 
@@ -552,7 +551,7 @@ contract LABUBU3 is ERC20, Ownable {
             }
 
             if (eligible) {
-                payable(current).transfer(reward);
+                safeTransferETH(current, reward);
                 emit DistributeReferralReward(user, current, i + 1, reward);
                 distributedReward = distributedReward.add(reward);
             }
@@ -568,8 +567,7 @@ contract LABUBU3 is ERC20, Ownable {
         // 剩余部分
         uint256 remaining = totalReward.sub(distributedReward).sub(nftAmount);
         if (remaining > 0) {
-            // TODO 直接用transfer 可能会报错
-            payable(defaultInviteAddress).transfer(remaining);
+            safeTransferETH(defaultInviteAddress, remaining);
         }
     }
 
@@ -718,7 +716,7 @@ contract LABUBU3 is ERC20, Ownable {
 
     function withdrawEth(address recipient, uint256 value) external onlyOwner {
         require(address(this).balance >= value, "Insufficient BNB");
-        payable(recipient).transfer(value);
+        safeTransferETH(recipient, value);
 
         emit WithdrawalToken(address(0x0), recipient, value);
     }
