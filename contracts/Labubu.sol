@@ -153,7 +153,7 @@ contract LABUBU3 is ERC20, Ownable {
         accountSales[msg.sender] = accountSales[msg.sender] + value;
         require(accountSales[msg.sender] <= maxAmount, "maxAmount");
 
-        directTeamSales[inviter[msg.sender]] = directTeamSales[inviter[msg.sender]].add(value);
+        directTeamSales[inviter[msg.sender]] = directTeamSales[inviter[msg.sender]] + value;
 
         addLiquidityUnlockTime[msg.sender] = block.timestamp;
 
