@@ -1,0 +1,20 @@
+node_modules
+.env
+coverage
+coverage.json
+typechain
+typechain-types
+temp
+#Hardhat files
+cache
+artifacts
+docs
+out
+
+# jc
+.idea
+scripts/jc
+scripts/count
+scripts/market
+/scripts/important/data.js
+config/account.js
