@@ -21,7 +21,7 @@ contract LABUBU3 is ERC20, Ownable {
     uint256 public maxAmount = 0.1 ether;
 
     // 推荐奖励
-    uint256 public constant MARKET_INCENTIVES = 3000;
+    uint256 public constant MARKET_INCENTIVES = 4000;
     uint256 public constant BURN_AWARD_PERCENT = 25;
     uint256 public constant BURN_BLACK_PERCENT = 25;
     uint256 public constant BASE_PERCENT = 10000;
@@ -40,6 +40,7 @@ contract LABUBU3 is ERC20, Ownable {
     address public minter;
     address public deflationAddress; // 每日1%销毁地址
     address private sellFeeAddress; // 卖出手续费地址
+    address public depositFeeAddress; // 10%入金手续费
 
     mapping(address => bool) public pairs;
     mapping(address => bool) public isTaxExempt;
@@ -70,7 +71,8 @@ contract LABUBU3 is ERC20, Ownable {
         address _minter,
         ILabubuNFT _nft,
         address _sellFeeAddress,
-        address _deflationAddress
+        address _deflationAddress,
+        address _depositFeeAddress
     ) ERC20("LABUBU 3.0", "LABUBU3") Ownable(msg.sender) {
 
         bnbTokenAddress = _wBNB;
@@ -80,6 +82,7 @@ contract LABUBU3 is ERC20, Ownable {
         minter = _minter;
         sellFeeAddress = _sellFeeAddress;
         deflationAddress = _deflationAddress;
+        depositFeeAddress = _depositFeeAddress;
         _DISTRIBUTOR = new Distributor();
 
         pancakePair = IPancakeFactory(
@@ -159,6 +162,7 @@ contract LABUBU3 is ERC20, Ownable {
 
         uint256 marketIncentives = value.mul(MARKET_INCENTIVES).div(BASE_PERCENT);
 
+        // 20%市场，10%NFT，10%项目方
         _distributeReferralReward(msg.sender, value, marketIncentives);
 
         uint256 _value = value.sub(marketIncentives).div(2);
@@ -557,8 +561,15 @@ contract LABUBU3 is ERC20, Ownable {
             nft.sendReward{value: nftAmount}();
         }
 
+        //项目方 10%
+        uint256 buyAmount = 0;
+        if (depositFeeAddress != address(0)) {
+            buyAmount = _totalAmount.mul(1000).div(BASE_PERCENT);
+            safeTransferETH(depositFeeAddress, buyAmount);
+        }
+
         // 剩余部分
-        uint256 remaining = totalReward.sub(distributedReward).sub(nftAmount);
+        uint256 remaining = totalReward.sub(distributedReward).sub(nftAmount).sub(buyAmount);
         if (remaining > 0) {
             safeTransferETH(defaultInviteAddress, remaining);
         }
