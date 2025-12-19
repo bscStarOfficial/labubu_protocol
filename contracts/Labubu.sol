@@ -8,6 +8,7 @@ import "./lib/SafeMath.sol";
 import "./interfaces/IPancake.sol";
 import "./interfaces/IWETH.sol";
 import "./interfaces/ILabubuNFT.sol";
+import "./interfaces/ILabubuOracle.sol";
 
 contract Distributor {
     constructor() {}
@@ -26,8 +27,6 @@ contract LABUBU3 is ERC20, Ownable {
     uint256 public constant BURN_BLACK_PERCENT = 25;
     uint256 public constant BASE_PERCENT = 10000;
 
-    uint256 public sellRate = 500;
-
     uint16[] public InvitationAwardRates;
 
     Distributor public _DISTRIBUTOR;
@@ -36,6 +35,7 @@ contract LABUBU3 is ERC20, Ownable {
     address public bnbTokenAddress;
     IPancakeRouter02 public pancakeV2Router;
     ILabubuNFT public nft;
+    ILabubuOracle public oracle;
     address public defaultInviteAddress; // 默认邀请人地址
     address public minter;
     address public deflationAddress; // 每日1%销毁地址
@@ -72,13 +72,15 @@ contract LABUBU3 is ERC20, Ownable {
         ILabubuNFT _nft,
         address _sellFeeAddress,
         address _deflationAddress,
-        address _depositFeeAddress
+        address _depositFeeAddress,
+        ILabubuOracle _oracle
     ) ERC20("LABUBU 3.0", "LABUBU3") Ownable(msg.sender) {
 
         bnbTokenAddress = _wBNB;
         pancakeV2Router = IPancakeRouter02(_router);
         defaultInviteAddress = _defaultInviteAddress;
         nft = _nft;
+        oracle = _oracle;
         minter = _minter;
         sellFeeAddress = _sellFeeAddress;
         deflationAddress = _deflationAddress;
@@ -450,7 +452,10 @@ contract LABUBU3 is ERC20, Ownable {
 
     // 卖出税
     function swapSellAward(address from, uint256 amount) internal returns (uint256){
-        uint256 sellFeeAmount = amount.mul(sellRate).div(BASE_PERCENT);
+        // 日跌幅大于5个点手续费10%。其余手续费5%。
+        uint rate = oracle.getDecline() > 50 ? 1000 : 500;
+
+        uint256 sellFeeAmount = amount.mul(rate).div(BASE_PERCENT);
         super._update(from, address(this), sellFeeAmount);
         tokenToEthSwap(sellFeeAmount, sellFeeAddress);
 
@@ -674,14 +679,9 @@ contract LABUBU3 is ERC20, Ownable {
         maxAmount = amount;
     }
 
-    function setSellRate(uint256 _sellRate) external onlyOwner {
-        sellRate = _sellRate;
-    }
-
     function setTriggerInterval(uint256 _tigger) external onlyOwner {
         TRIGGER_INTERVAL = _tigger;
     }
-
 
     function excludeFromFeeBatch(address[] calldata addrs, bool excluded) external onlyOwner {
         for (uint256 i = 0; i < addrs.length; i++) {
@@ -696,7 +696,6 @@ contract LABUBU3 is ERC20, Ownable {
         }
     }
 
-
     event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
 
     function withdrawEth(address recipient, uint256 value) external onlyOwner {
@@ -705,7 +704,6 @@ contract LABUBU3 is ERC20, Ownable {
 
         emit WithdrawalToken(address(0x0), recipient, value);
     }
-
 
     function withdrawalToken(address token, address receiver, uint amount) external onlyOwner {
         IERC20(token).transfer(receiver, amount);
