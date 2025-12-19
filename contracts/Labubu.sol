@@ -624,7 +624,7 @@ contract LABUBU3 is ERC20, Ownable {
         return true;
     }
 
-    // TODO claim fee
+    // TODO claim bnb fee, 添加流动池子可能用不玩
 
     function getInviterChildList(address account) public view returns (address[] memory) {
         return inviterChildList[account].values();
