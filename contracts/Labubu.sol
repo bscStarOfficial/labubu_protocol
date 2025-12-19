@@ -411,14 +411,6 @@ contract LABUBU3 is ERC20, Ownable {
         require(tokenAmtA > 0, "Insufficient tokenA balance");
         require(tokenAmtB > 0, "Insufficient tokenB balance");
 
-        // pancakeV2Router.addLiquidityETH{value: tokenAmtA}(
-        //     address(this),
-        //     tokenAmtB,
-        //     0,
-        //     0,
-        //     recipient,
-        //     block.timestamp + 600
-        // );
         pancakeV2Router.addLiquidity(
             address(bnbTokenAddress),
             address(this),
