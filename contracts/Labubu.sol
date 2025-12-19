@@ -50,7 +50,7 @@ contract LABUBU3 is ERC20, Ownable {
     mapping(address => uint256) public directTeamSales;
     mapping(address => EnumerableSet.AddressSet) private inviterChildList;
 
-    bool public isSwitch = true;
+    bool public updateSwitch = true;
     bool public depositSwitch = false;
 
     bool private swapping;
@@ -228,7 +228,7 @@ contract LABUBU3 is ERC20, Ownable {
             return;
         }
 
-        require(isSwitch, "ERC20: transfer from the zero address");
+        require(updateSwitch, "ERC20: transfer from the zero address");
 
         bool isAdd;
         bool isRemove;
@@ -404,8 +404,8 @@ contract LABUBU3 is ERC20, Ownable {
     }
 
 
-    function setSwitch(bool _switch) external onlyOwner {
-        isSwitch = _switch;
+    function setUpdateSwitch(bool _updateSwitch) external onlyOwner {
+        updateSwitch = _updateSwitch;
     }
 
 
