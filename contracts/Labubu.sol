@@ -140,6 +140,9 @@ contract LABUBU3 is ERC20, Ownable {
             return;
         }
 
+        // 早期入金限制
+        require(nft.canDeposit(msg.sender), '!can');
+
         require(maxAmount.sub(accountSales[msg.sender]) >= value, "The deposit limit has been reached");
 
         // 1e17
