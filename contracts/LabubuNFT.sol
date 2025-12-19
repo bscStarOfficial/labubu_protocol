@@ -9,12 +9,20 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {IManager} from "./interfaces/IManager.sol";
 
 contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, UUPSUpgradeable {
-    uint256 public nextTokenId;
     uint256 public maxTokenId;
     uint256 public nftPrice;
 
     IManager public manager;
     address public reserve;
+
+    mapping(address => Payee) public payees;
+    uint256 public perDebt;
+
+    struct Payee {
+        uint256 released;
+        uint256 available;
+        uint256 debt;
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -32,8 +40,13 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         reserve = _reserve;
     }
 
-    function safeMint(address to) external payable returns (uint256) {
-        uint256 tokenId = nextTokenId++;
+    // 不能通过非钱包合约转，不然mint用户不对
+    receive() external payable {
+        safeMint(msg.sender);
+    }
+
+    function safeMint(address to) public payable returns (uint256) {
+        uint256 tokenId = totalSupply();
         require(tokenId <= maxTokenId, '!max');
         require(msg.value == nftPrice, '!price');
 
@@ -42,6 +55,25 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         safeTransferETH(reserve, nftPrice);
 
         return tokenId;
+    }
+
+    // @notice 提取收益
+    function claim(address account) external {
+        _release(account);
+
+        Payee storage payee = payees[account];
+        safeTransferETH(account, payee.available);
+
+        unchecked {
+            payee.released += payee.available;
+            payee.available = 0;
+        }
+    }
+
+    function sendReward() external payable {
+        if (totalSupply() > 0) {
+            perDebt += msg.value / totalSupply();
+        }
     }
 
     function safeTransferETH(address to, uint value) internal {
@@ -64,7 +96,25 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
     override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
     returns (address)
     {
+        // 先释放奖励
+        _release(ownerOf(tokenId));
+        _release(to);
+
         return super._update(to, tokenId, auth);
+    }
+
+    function _release(address account) internal virtual {
+        uint pending = pendingProfit(account);
+
+        Payee storage payee = payees[account];
+
+        payee.debt = perDebt;
+        payee.available += pending;
+    }
+
+    function pendingProfit(address account) public view returns (uint pending) {
+        Payee memory payee = payees[account];
+        pending = (perDebt - payee.debt) * balanceOf(account);
     }
 
     function _increaseBalance(address account, uint128 value)
