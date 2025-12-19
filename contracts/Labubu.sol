@@ -52,7 +52,6 @@ contract LABUBU3 is ERC20, Ownable {
     mapping(address => EnumerableSet.AddressSet) private inviterChildList;
 
     bool public updateSwitch = true;
-    bool public depositSwitch = false;
 
     bool private swapping;
     mapping(address => uint256) public addLiquidityUnlockTime;
@@ -116,7 +115,8 @@ contract LABUBU3 is ERC20, Ownable {
     }
 
     receive() external payable {
-        require(depositSwitch, "Deposit is not yet open");
+        // 早期入金限制
+        require(nft.canDeposit(msg.sender), '!can');
 
         uint256 value = msg.value;
 
@@ -139,9 +139,6 @@ contract LABUBU3 is ERC20, Ownable {
             nft.safeMint{value: value}(msg.sender);
             return;
         }
-
-        // 早期入金限制
-        require(nft.canDeposit(msg.sender), '!can');
 
         // 1e17
         if (value < minAmount || value > maxAmount || isContract(msg.sender) || value % 0.1 ether > 0) {
@@ -383,12 +380,6 @@ contract LABUBU3 is ERC20, Ownable {
     function setUpdateSwitch(bool _updateSwitch) external onlyOwner {
         updateSwitch = _updateSwitch;
     }
-
-
-    function setDepositSwitch(bool _switch) external onlyOwner {
-        depositSwitch = _switch;
-    }
-
 
     function isContract(address _address) private view returns (bool) {
         uint32 size;
