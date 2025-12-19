@@ -9,7 +9,9 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {IManager} from "./interfaces/IManager.sol";
 
 contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, UUPSUpgradeable {
-    uint256 public maxTokenId;
+    uint256 public maxTokenId;   // 最大mint的id
+    uint256 public maxDepositId; // 最大可入金Id
+    mapping(address => bool) public depositWhitelist; // labubu入金白名单
     uint256 public nftPrice;
 
     IManager public manager;
@@ -76,6 +78,18 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         }
     }
 
+    function canDeposit(address account) external view returns (bool) {
+        if (depositWhitelist[account]) return true;
+
+        uint balance = balanceOf(account);
+        for (uint i = 0; i < balance; i++) {
+            uint tokenId = tokenOfOwnerByIndex(account, i);
+            if (tokenId <= maxDepositId)
+                return true;
+        }
+        return false;
+    }
+
     function safeTransferETH(address to, uint value) internal {
         (bool success,) = to.call{value: value}(new bytes(0));
         require(success, 'ETH_TRANSFER_FAILED');
@@ -85,6 +99,20 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         manager.allowFoundation(msg.sender);
 
         maxTokenId = _maxTokenId;
+    }
+
+    function setMaxDepositId(uint256 _maxDepositId) external {
+        manager.allowFoundation(msg.sender);
+
+        maxDepositId = _maxDepositId;
+    }
+
+    function setDepositWhitelist(address[] memory accounts, bool status) external {
+        manager.allowFoundation(msg.sender);
+
+        for (uint i = 0; i < accounts.length; i++) {
+            depositWhitelist[accounts[i]] = status;
+        }
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override {

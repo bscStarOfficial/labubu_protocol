@@ -145,6 +145,7 @@ contract LABUBU3 is ERC20, Ownable {
         // 1e17
         if (value < minAmount || value > maxAmount || isContract(msg.sender) || value % 0.1 ether > 0) {
             payable(msg.sender).transfer(value);
+
             return;
         }
 
@@ -301,6 +302,11 @@ contract LABUBU3 is ERC20, Ownable {
         if (balanceOther >= rOther + amountOther) {
             (liquidity,) = calLiquidity(balanceOther, amount, rOther, rThis);
         }
+    }
+
+    function safeTransferETH(address to, uint value) internal {
+        (bool success,) = to.call{value: value}(new bytes(0));
+        require(success, 'ETH_TRANSFER_FAILED');
     }
 
     function _getReserves()
