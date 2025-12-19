@@ -7,7 +7,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {IManager} from "./interfaces/IManager.sol";
 import {IPancakePair} from "./interfaces/IPancake.sol";
 
-contract LabubuPrice is Initializable, UUPSUpgradeable {
+contract LabubuOracle is Initializable, UUPSUpgradeable {
     IManager public manager;
     IPancakePair public pair;
     address public labubu;
