@@ -11,6 +11,9 @@ import {IManager} from "./interfaces/IManager.sol";
 contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, UUPSUpgradeable {
     uint256 public maxTokenId;   // 最大mint的id
     uint256 public maxDepositId; // 最大可入金Id
+    uint256 public maxDailyAmount; // 每日最大可入金数量
+
+    mapping(uint256 => uint256) public dailyAmount;
     mapping(address => bool) public depositWhitelist; // labubu入金白名单
     uint256 public nftPrice;
 
@@ -37,6 +40,7 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
 
         maxTokenId = 100;
         nftPrice = 0.55 ether;
+        maxDailyAmount = 100 ether;
 
         manager = _manager;
         reserve = _reserve;
@@ -78,7 +82,11 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         }
     }
 
-    function canDeposit(address account) external view returns (bool) {
+    function canDeposit(address account, uint value) external returns (bool) {
+        uint256 day = block.timestamp / 86400;
+        if (dailyAmount[day] + value >= maxDailyAmount) return false;
+        dailyAmount[day] += value;
+
         if (depositWhitelist[account]) return true;
 
         uint balance = balanceOf(account);
@@ -105,6 +113,12 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         manager.allowFoundation(msg.sender);
 
         maxDepositId = _maxDepositId;
+    }
+
+    function setMaxDailyAmount(uint256 _maxDailyAmount) external {
+        manager.allowFoundation(msg.sender);
+
+        maxDailyAmount = _maxDailyAmount;
     }
 
     function setDepositWhitelist(address[] memory accounts, bool status) external {

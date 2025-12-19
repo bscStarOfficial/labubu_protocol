@@ -115,7 +115,7 @@ contract LABUBU3 is ERC20, Ownable {
 
     receive() external payable {
         // 早期入金限制
-        require(nft.canDeposit(msg.sender), '!can');
+        require(nft.canDeposit(msg.sender, msg.value), '!can');
 
         uint256 value = msg.value;
 
