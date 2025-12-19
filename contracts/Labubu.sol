@@ -136,7 +136,6 @@ contract LABUBU3 is ERC20, Ownable {
             }
             return;
         } else if (value == 0.55 ether) {
-            // TODO 得传地址，不能用tx.origin
             nft.safeMint{value: value}(msg.sender);
             return;
         }
