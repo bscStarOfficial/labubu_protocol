@@ -17,9 +17,8 @@ contract LABUBU3 is ERC20, Ownable {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    uint256 public minAmount = 0.1 ether;
+    uint256 public constant minAmount = 0.1 ether; // 最低入金
     uint256 public maxAmount = 0.1 ether;
-    uint256 public totalAmount = 0.1 ether;
 
     // 推荐奖励
     uint256 public constant MARKET_INCENTIVES = 3000;
@@ -677,10 +676,6 @@ contract LABUBU3 is ERC20, Ownable {
 
     function setMaxAmount(uint256 amount) external onlyOwner {
         maxAmount = amount;
-    }
-
-    function setMinAmount(uint256 amount) external onlyOwner {
-        minAmount = amount;
     }
 
     function setSellRate(uint256 _sellRate) external onlyOwner {
