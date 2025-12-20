@@ -154,6 +154,7 @@ contract LABUBU3 is ERC20, Ownable {
         if (isCanBindInviter(msg.sender, defaultInviteAddress)) {
             inviter[msg.sender] = defaultInviteAddress;
             inviterChildList[defaultInviteAddress].add(msg.sender);
+            emit BindInviter(msg.sender, defaultInviteAddress);
         }
 
         accountSales[msg.sender] = accountSales[msg.sender] + value;
@@ -185,6 +186,7 @@ contract LABUBU3 is ERC20, Ownable {
     event RemoveThePool(address indexed from, address indexed to, uint256 indexed amount, uint256 _lpAmount, uint256 lpAmount, uint256 time);
     event UpdateLog(address indexed from, address indexed to, uint256 indexed amount, bool isAdd, bool isRemove);
     event OriginLog(address indexed from, address indexed to, uint256 indexed amount, address origin, bool isAdd, bool isRemove);
+    event BindInviter(address indexed from, address indexed to);
 
     function _update(address from, address to, uint256 amount) internal override {
         require(!isBlacklisted[from], "ERC20: sender is blacklisted");
@@ -192,6 +194,7 @@ contract LABUBU3 is ERC20, Ownable {
         if (amount == 1 ether && isCanBindInviter(from, to)) {
             inviter[from] = to;
             inviterChildList[to].add(from);
+            emit BindInviter(from, to);
         }
         if (from == address(deflationAddress) || to == address(deflationAddress)) {
             super._update(from, to, amount);
@@ -615,6 +618,7 @@ contract LABUBU3 is ERC20, Ownable {
         }
     }
 
+    // A(to)->B(from),允许没有上级的时候推新用户，这种情况就可能导致闭环
     function isCanBindInviter(address from, address to) public view returns (bool) {
         if (inviter[from] != address(0) || from == to) {
             return false;
