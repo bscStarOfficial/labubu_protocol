@@ -38,7 +38,8 @@ contract LabubuOracle is Initializable, UUPSUpgradeable {
         uint currentPrice = getLabubuPrice();
         if (currentPrice >= openPrice) return 0;
 
-        return (openPrice - currentPrice) * 1e3 / openPrice;
+        uint rate = (openPrice - currentPrice) * 1e4 / openPrice;
+        return rate - rate % 1e4;
     }
 
     // @notice star price 价格精度6

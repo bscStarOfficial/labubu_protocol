@@ -323,7 +323,6 @@ contract LABUBU3 is ERC20, Ownable {
         IPancakePair mainPair = IPancakePair(pancakePair);
         (uint r0, uint256 r1,) = mainPair.getReserves();
 
-        // TODO 不对
         address tokenOther = bnbTokenAddress;
         if (tokenOther < address(this)) {
             rOther = r0;
@@ -452,8 +451,9 @@ contract LABUBU3 is ERC20, Ownable {
 
     // 卖出税
     function swapSellAward(address from, uint256 amount) internal returns (uint256){
-        // 日跌幅大于5个点手续费10%。其余手续费5%。
-        uint rate = oracle.getDecline() > 50 ? 1000 : 500;
+        // 跌几个点，手续费x2。最低5%
+        uint rate = oracle.getDecline() * 2;
+        if (rate < 500) rate = 500;
 
         uint256 sellFeeAmount = amount.mul(rate).div(BASE_PERCENT);
         super._update(from, address(this), sellFeeAmount);
@@ -581,7 +581,10 @@ contract LABUBU3 is ERC20, Ownable {
         }
 
         uint256 rounds = (nowTime - lastTriggerTime) / TRIGGER_INTERVAL;
-        lastTriggerTime += rounds * TRIGGER_INTERVAL;
+        // lastTriggerTime += rounds * TRIGGER_INTERVAL;
+        // 通缩可暂停，最大一次通缩4次。
+        if (rounds > 4) rounds = 4;
+        lastTriggerTime = nowTime;
 
         uint256 liquidityPairBalance = this.balanceOf(pancakePair);
         if (liquidityPairBalance == 0) return;
