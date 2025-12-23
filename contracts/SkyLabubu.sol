@@ -7,8 +7,10 @@ import "./interfaces/IManager.sol";
 import "./interfaces/IPancake.sol";
 import "./interfaces/IRegisterV2.sol";
 import "./interfaces/IWETH.sol";
+import "./lib/LabubuConst.sol";
 import "./lib/SafeMath.sol";
-import "lib/LabubuConst.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
@@ -22,7 +24,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     uint256 public maxAmount = 0.1 ether;
     uint16[] public InvitationAwardRates;
 
-    Distributor immutable _DISTRIBUTOR;
+    Distributor public _DISTRIBUTOR;
     ILabubuNFT public nft;
     ILabubuOracle public oracle;
     IManager public manager;
@@ -95,8 +97,8 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         ).createPair(address(this), bnbTokenAddress);
         pairs[pancakePair] = true;
 
-        _approve(address(this), address(pancakeV2Router), ~uint256(0));
-        IERC20(bnbTokenAddress).approve(address(pancakeV2Router), ~uint256(0));
+        _approve(address(this), pancakeV2Router, ~uint256(0));
+        IERC20(bnbTokenAddress).approve(pancakeV2Router, ~uint256(0));
 
         burnRate.push(9000);
         burnRate.push(7000);
@@ -165,9 +167,8 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     }
 
 
-    event AddThePool(address indexed from, address indexed to, uint256 indexed amount);
     event RemoveThePool(address indexed from, address indexed to, uint256 indexed amount, uint256 _lpAmount, uint256 lpAmount, uint256 time);
-    event UpdateLog(address indexed from, address indexed to, uint256 indexed amount, bool isAdd, bool isRemove);
+    event UpdateLog(address indexed from, address indexed to, uint256 indexed amount, bool isRemove);
 
     function _update(address from, address to, uint256 amount) internal override {
         require(!isBlacklisted[from], "ERC20: sender is blacklisted");
@@ -184,52 +185,15 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             return;
         }
 
-        require(updateSwitch, "ERC20: transfer from the zero address");
+        require(updateSwitch, "!updateSwitch");
+        require(_isAddLiquidity(amount) == 0, "!addLp");
 
-        bool isAdd;
-        bool isRemove;
-        if (!isTaxExempt[from] && !isTaxExempt[to]) {
-            if (pairs[to]) {
-                uint256 addLPLiquidity = _isAddLiquidity(amount);
-                // if (addLPLiquidity > 0 && !isContract(from)) {
-                if (addLPLiquidity > 0) {
-                    isAdd = true;
-                }
-            }
-        }
-        if (pairs[from]) {
-            // if (pairs[from] && to != tx.origin) {
-            uint256 removeLPLiquidity = _isRemoveLiquidity(amount);
-            if (removeLPLiquidity > 0) {
-                isRemove = true;
-                // require(to != tx.origin, "Non-whitelisted pools are not allowed to be added");
-            }
-        }
+        bool isRemove = pairs[from] && _isRemoveLiquidity(amount) > 0;
 
-        if (!swapping &&
-        !isTaxExempt[from] &&
-        from != address(this) &&
-        !pairs[from] &&
-        !isAdd &&
-        from != address(pancakeV2Router) &&
-        burnAndMintSwitch
-        ) {
-            swapping = true;
-            _triggerDailyBurnAndMint();
-            swapping = false;
-        }
+        emit UpdateLog(from, to, amount, isRemove);
 
-        emit UpdateLog(from, to, amount, isAdd, isRemove);
-
-        if (
-            !isTaxExempt[from] &&
-        !isTaxExempt[to] &&
-        from != address(pancakeV2Router)
-        ) {
-            if (isAdd) {
-                require(isTaxExempt[from], "Non-whitelisted pools are not allowed to be added");
-                emit AddThePool(from, to, amount);
-            } else if (isRemove && !isBlacklisted[to]) {
+        if (from != pancakeV2Router) {
+            if (isRemove && !isBlacklisted[to]) {
                 uint256 _amount;
                 IPancakePair pair = IPancakePair(pancakePair);
                 uint256 _lpAmount = pair.balanceOf(to);
@@ -334,7 +298,9 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         uint256 r1
     ) private view returns (uint256 liquidity, uint256 feeToLiquidity) {
         uint256 pairTotalSupply = IPancakePair(pancakePair).totalSupply();
-        address feeTo = IPancakeFactory(pancakeV2Router.factory()).feeTo();
+        address feeTo = IPancakeFactory(
+            IPancakeRouter02(pancakeV2Router).factory()
+        ).feeTo();
         bool feeOn = feeTo != address(0);
         uint256 _kLast = IPancakePair(pancakePair).kLast();
         if (feeOn) {
@@ -363,7 +329,8 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     }
 
 
-    function setUpdateSwitch(bool _updateSwitch) external onlyOwner {
+    function setUpdateSwitch(bool _updateSwitch) external {
+        manager.allowFoundation(msg.sender);
         updateSwitch = _updateSwitch;
     }
 
@@ -374,7 +341,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         path[0] = bnbTokenAddress;
         path[1] = toToken;
 
-        pancakeV2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(
+        IPancakeRouter02(pancakeV2Router).swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(
             0,
             path,
             address(_DISTRIBUTOR),
@@ -392,7 +359,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         require(tokenAmtA > 0, "Insufficient tokenA balance");
         require(tokenAmtB > 0, "Insufficient tokenB balance");
 
-        pancakeV2Router.addLiquidity(
+        IPancakeRouter02(pancakeV2Router).addLiquidity(
             address(bnbTokenAddress),
             address(this),
             tokenAmtA,
@@ -417,7 +384,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
         // uint256 before = address(this).balance;
 
-        pancakeV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+        IPancakeRouter02(pancakeV2Router).swapExactTokensForETHSupportingFeeOnTransferTokens(
             amountIn,
             0,
             path,
@@ -549,7 +516,9 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
     event TriggerDailyBurnAndMint(uint256 indexed liquidityPairBalance, uint256 indexed burnAmount, uint256 indexed holdLPAwardAmount, uint256 rounds);
 
-    function _triggerDailyBurnAndMint() internal {
+    function triggerDailyBurnAndMint() external {
+        if (!burnAndMintSwitch) return;
+
         uint256 nowTime = block.timestamp;
 
         // 周期
@@ -558,7 +527,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         }
 
         uint256 rounds = (nowTime - lastTriggerTime) / TRIGGER_INTERVAL;
-        // lastTriggerTime += rounds * TRIGGER_INTERVAL;
         // 通缩可暂停，最大一次通缩4次。
         if (rounds > 4) rounds = 4;
         lastTriggerTime = nowTime;
@@ -574,8 +542,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         uint256 holdLPAwardAmount = liquidityPairBalance.mul(BURN_AWARD_PERCENT).mul(rounds).div(BASE_PERCENT);
         if (holdLPAwardAmount > 0) {
             super._update(pancakePair, address(deflationAddress), holdLPAwardAmount);
-            // holdLPAward = holdLPAward.add(holdLPAwardAmount);
-
         }
 
         emit TriggerDailyBurnAndMint(liquidityPairBalance, blackAmount, holdLPAwardAmount, rounds);
@@ -595,16 +561,19 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     // TODO claim bnb fee, 添加流动池子可能用不玩
 
 
-    function setBurnAndMintSwitch(bool _switch) external onlyOwner {
+    function setBurnAndMintSwitch(bool _switch) external {
+        manager.allowFoundation(msg.sender);
         burnAndMintSwitch = _switch;
         lastTriggerTime = block.timestamp;
     }
 
-    function setMintNFTAddress(ILabubuNFT _nft) external onlyOwner {
+    function setMintNFTAddress(ILabubuNFT _nft) external {
+        manager.allowFoundation(msg.sender);
         nft = _nft;
     }
 
-    function setDeflationAddress(address _deflationAddress) external onlyOwner {
+    function setDeflationAddress(address _deflationAddress) external {
+        manager.allowFoundation(msg.sender);
         deflationAddress = _deflationAddress;
     }
 
@@ -666,5 +635,9 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         for (uint i = 0; i < _burn.length; i++) {
             burnRate.push(_burn[i]);
         }
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal view override {
+        manager.allowUpgrade(newImplementation, msg.sender);
     }
 }
