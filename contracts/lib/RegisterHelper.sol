@@ -7,15 +7,11 @@ contract RegisterHelper {
     mapping(address => address[]) public referrals;
 
     function registerInternal(address referral, address referrer) internal virtual {
-        // if (registered(referral)) return;
-
         require(!registered(referral), "registered");
         require(registered(referrer), "referrer does not existed");
 
         referrers[referral] = referrer;
         referrals[referrer].push(referral);
-
-//        emit Registered(referral, referrer);
     }
 
     function registered(address user) public view returns (bool) {
