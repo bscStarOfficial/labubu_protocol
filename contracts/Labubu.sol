@@ -74,7 +74,7 @@ contract LABUBU3 is ERC20, Ownable {
         address _deflationAddress,
         address _depositFeeAddress,
         ILabubuOracle _oracle
-    ) ERC20("LABUBU 3.0", "LABUBU3") Ownable(msg.sender) {
+    ) ERC20("Sky Labubu", "SkyLabubu") Ownable(msg.sender) {
 
         bnbTokenAddress = _wBNB;
         pancakeV2Router = IPancakeRouter02(_router);
