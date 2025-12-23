@@ -14,7 +14,7 @@ contract Distributor {
     constructor() {}
 }
 
-contract LABUBU3 is ERC20, Ownable {
+contract SkyLabubu is ERC20, Ownable {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
 
