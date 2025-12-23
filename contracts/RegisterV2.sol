@@ -17,9 +17,9 @@ contract RegisterV2 is Initializable, UUPSUpgradeable, RegisterHelper {
         manager = _manager;
     }
 
-    function register(address referrer) external {
-        registerInternal(msg.sender, referrer);
-        emit Registered(msg.sender, referrer);
+    function register(address referral, address referrer) external {
+        registerInternal(referral, referrer);
+        emit Registered(referral, referrer);
     }
 
     function setReferrer(address referral, address referrer) external {

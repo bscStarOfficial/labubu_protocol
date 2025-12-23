@@ -1,55 +1,45 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "./lib/SafeMath.sol";
-import "./interfaces/IPancake.sol";
-import "./interfaces/IWETH.sol";
 import "./interfaces/ILabubuNFT.sol";
 import "./interfaces/ILabubuOracle.sol";
+import "./interfaces/IManager.sol";
+import "./interfaces/IPancake.sol";
+import "./interfaces/IRegisterV2.sol";
+import "./interfaces/IWETH.sol";
+import "./lib/SafeMath.sol";
+import "lib/LabubuConst.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract Distributor {
     constructor() {}
 }
 
-contract SkyLabubu is ERC20, Ownable {
+contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     using SafeMath for uint256;
-    using EnumerableSet for EnumerableSet.AddressSet;
 
-    uint256 public constant minAmount = 0.1 ether; // 最低入金
     uint256 public maxAmount = 0.1 ether;
-
-    // 推荐奖励
-    uint256 public constant MARKET_INCENTIVES = 4000;
-    uint256 public constant BURN_AWARD_PERCENT = 25;
-    uint256 public constant BURN_BLACK_PERCENT = 25;
-    uint256 public constant BASE_PERCENT = 10000;
-
     uint16[] public InvitationAwardRates;
 
-    Distributor public _DISTRIBUTOR;
-    address public pancakePair;
-    address public constant BLACK_ADDRESS = address(0xdEaD);
-    address public bnbTokenAddress;
-    IPancakeRouter02 public pancakeV2Router;
+    Distributor immutable _DISTRIBUTOR;
     ILabubuNFT public nft;
     ILabubuOracle public oracle;
+    IManager public manager;
+    IRegisterV2 public registerV2;
+
     address public defaultInviteAddress; // 默认邀请人地址
-    address public minter;
     address public deflationAddress; // 每日1%销毁地址
     address private sellFeeAddress; // 卖出手续费地址
     address public depositFeeAddress; // 10%入金手续费
 
+    address public pancakePair;
     mapping(address => bool) public pairs;
     mapping(address => bool) public isTaxExempt;
     mapping(address => bool) public isBlacklisted;
 
-    mapping(address => address) public inviter;
     mapping(address => uint256) public accountSales;
     mapping(address => uint256) public directTeamSales;
-    mapping(address => EnumerableSet.AddressSet) private inviterChildList;
 
     bool public updateSwitch = true;
 
@@ -64,27 +54,40 @@ contract SkyLabubu is ERC20, Ownable {
 
     uint256[] public burnRate;
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
         address _wBNB,
-        address _router,
+        address _router
+    ) {
+        _disableInitializers();
+
+        bnbTokenAddress = _wBNB;
+        pancakeV2Router = _router;
+    }
+
+    function initialize(
         address _defaultInviteAddress,
         address _minter,
         ILabubuNFT _nft,
         address _sellFeeAddress,
         address _deflationAddress,
         address _depositFeeAddress,
-        ILabubuOracle _oracle
-    ) ERC20("Sky Labubu", "SkyLabubu") Ownable(msg.sender) {
+        ILabubuOracle _oracle,
+        IManager _manager,
+        IRegisterV2 _registerV2
+    ) public initializer {
+        __ERC20_init("Sky Labubu", "SkyLabubu");
 
-        bnbTokenAddress = _wBNB;
-        pancakeV2Router = IPancakeRouter02(_router);
         defaultInviteAddress = _defaultInviteAddress;
         nft = _nft;
-        oracle = _oracle;
-        minter = _minter;
+
         sellFeeAddress = _sellFeeAddress;
         deflationAddress = _deflationAddress;
         depositFeeAddress = _depositFeeAddress;
+        oracle = _oracle;
+        manager = _manager;
+        registerV2 = _registerV2;
+
         _DISTRIBUTOR = new Distributor();
 
         pancakePair = IPancakeFactory(
@@ -124,44 +127,24 @@ contract SkyLabubu is ERC20, Ownable {
         // 早期入金限制
         require(nft.canDeposit(msg.sender, value), '!can');
 
-        if (msg.sender == minter) {
-            if (value == 10) {
-                maxAmount = 0.1 ether;
-            } else if (value == 11) {
-                maxAmount = 0.2 ether;
-            } else if (value == 12) {
-                maxAmount = 0.3 ether;
-            } else if (value == 13) {
-                maxAmount = 0.5 ether;
-            } else if (value == 14) {
-                maxAmount = 1 ether;
-            } else if (value == 15) {
-                maxAmount = 2 ether;
-            }
-            return;
-        } else if (value == 0.55 ether) {
+        if (value == 0.6 ether) {
             nft.safeMint{value: value}(msg.sender);
             return;
         }
 
-        // 1e17
-        // if (value < minAmount || value > maxAmount || isContract(msg.sender) || value % 0.1 ether > 0) {
-        if (value < minAmount || value > maxAmount || value % 0.1 ether > 0) {
+        // 1e17 原版限制isContract(msg.sender)
+        if (value < MIN_AMOUNT || value > maxAmount || value % 0.1 ether > 0) {
             safeTransferETH(msg.sender, value);
             return;
         }
 
-        if (isCanBindInviter(msg.sender, defaultInviteAddress)) {
-            inviter[msg.sender] = defaultInviteAddress;
-            inviterChildList[defaultInviteAddress].add(msg.sender);
-            emit BindInviter(msg.sender, defaultInviteAddress);
-        }
+        require(registerV2.registered(msg.sender), "!registered");
 
-        accountSales[msg.sender] = accountSales[msg.sender] + value;
+        accountSales[msg.sender] += value;
         require(accountSales[msg.sender] <= maxAmount, "maxAmount");
 
-        directTeamSales[inviter[msg.sender]] = directTeamSales[inviter[msg.sender]] + value;
-
+        address referrer = registerV2.referrers(msg.sender);
+        directTeamSales[referrer] = directTeamSales[referrer] + value;
         addLiquidityUnlockTime[msg.sender] = block.timestamp;
 
         uint256 marketIncentives = value.mul(MARKET_INCENTIVES).div(BASE_PERCENT);
@@ -185,16 +168,12 @@ contract SkyLabubu is ERC20, Ownable {
     event AddThePool(address indexed from, address indexed to, uint256 indexed amount);
     event RemoveThePool(address indexed from, address indexed to, uint256 indexed amount, uint256 _lpAmount, uint256 lpAmount, uint256 time);
     event UpdateLog(address indexed from, address indexed to, uint256 indexed amount, bool isAdd, bool isRemove);
-    event OriginLog(address indexed from, address indexed to, uint256 indexed amount, address origin, bool isAdd, bool isRemove);
-    event BindInviter(address indexed from, address indexed to);
 
     function _update(address from, address to, uint256 amount) internal override {
         require(!isBlacklisted[from], "ERC20: sender is blacklisted");
 
-        if (amount == 1 ether && isCanBindInviter(from, to)) {
-            inviter[from] = to;
-            inviterChildList[to].add(from);
-            emit BindInviter(from, to);
+        if (amount == 1 ether && !registerV2.registered(from)) {
+            registerV2.register(from, to);
         }
         if (from == address(deflationAddress) || to == address(deflationAddress)) {
             super._update(from, to, amount);
@@ -227,8 +206,7 @@ contract SkyLabubu is ERC20, Ownable {
             }
         }
 
-        if (
-            !swapping &&
+        if (!swapping &&
         !isTaxExempt[from] &&
         from != address(this) &&
         !pairs[from] &&
@@ -241,7 +219,6 @@ contract SkyLabubu is ERC20, Ownable {
             swapping = false;
         }
 
-        emit OriginLog(from, to, amount, tx.origin, isAdd, isRemove);
         emit UpdateLog(from, to, amount, isAdd, isRemove);
 
         if (
@@ -488,14 +465,15 @@ contract SkyLabubu is ERC20, Ownable {
 
         uint256 lpValueInBNB = bnbAmount.mul(2);
 
-        return lpValueInBNB >= minAmount.div(2);
+        return lpValueInBNB >= MIN_AMOUNT.div(2);
     }
 
 
     function isChildListLpValueAboveThreshold(address account, uint256 num) internal view returns (bool) {
         uint256 validNum;
-        for (uint8 i = 0; i < inviterChildList[account].length(); i++) {
-            address c = inviterChildList[account].at(i);
+        address[] memory referrals = registerV2.getReferrals(account);
+        for (uint8 i = 0; i < referrals.length; i++) {
+            address c = referrals[i];
             bool valid = isLpValueAboveThreshold(c);
             if (valid) {
                 validNum = validNum.add(1);
@@ -512,15 +490,11 @@ contract SkyLabubu is ERC20, Ownable {
     event DistributeReferralReward(address indexed from, address indexed to, uint8 indexed level, uint256 amount);
 
     function _distributeReferralReward(address user, uint256 _totalAmount, uint256 totalReward) internal {
-        address current = user;
         uint256 distributedReward = 0;
 
-        for (uint8 i = 0; i < 10; i++) {
-            current = inviter[current];
-            if (current == address(0)) {
-                break;
-            }
-
+        (address[] memory _referrers, uint realCount) = registerV2.getReferrers(user, 10);
+        for (uint8 i = 0; i < realCount; i++) {
+            address referrer = _referrers[i];
             uint256 rate = InvitationAwardRates[i]; // 对应层级的万分比
             uint256 reward = _totalAmount.mul(rate).div(BASE_PERCENT);
             if (reward == 0) {
@@ -529,21 +503,21 @@ contract SkyLabubu is ERC20, Ownable {
 
             bool eligible = false;
             if (i == 0) {
-                eligible = isLpValueAboveThreshold(current);
+                eligible = isLpValueAboveThreshold(referrer);
             } else if (i == 1) {
-                eligible = isLpValueAboveThreshold(current) && isChildListLpValueAboveThreshold(current, 3);
+                eligible = isLpValueAboveThreshold(referrer) && isChildListLpValueAboveThreshold(referrer, 3);
             } else if (i == 2) {
-                eligible = isLpValueAboveThreshold(current) && isChildListLpValueAboveThreshold(current, 5);
+                eligible = isLpValueAboveThreshold(referrer) && isChildListLpValueAboveThreshold(referrer, 5);
             } else if (i == 3) {
-                eligible = isLpValueAboveThreshold(current) && isChildListLpValueAboveThreshold(current, 7);
+                eligible = isLpValueAboveThreshold(referrer) && isChildListLpValueAboveThreshold(referrer, 7);
             } else {
-                eligible = isLpValueAboveThreshold(current) && isChildListLpValueAboveThreshold(current, 10);
+                eligible = isLpValueAboveThreshold(referrer) && isChildListLpValueAboveThreshold(referrer, 10);
             }
 
             if (eligible) {
-                safeTransferETH(current, reward);
-                emit DistributeReferralReward(user, current, i + 1, reward);
-                distributedReward = distributedReward.add(reward);
+                safeTransferETH(referrer, reward);
+                emit DistributeReferralReward(user, referrer, i + 1, reward);
+                distributedReward += reward;
             }
         }
 
@@ -618,29 +592,8 @@ contract SkyLabubu is ERC20, Ownable {
         }
     }
 
-    // A(to)->B(from),允许没有上级的时候推新用户，这种情况就可能导致闭环
-    function isCanBindInviter(address from, address to) public view returns (bool) {
-        if (inviter[from] != address(0) || from == to) {
-            return false;
-        }
-        address current = to;
-        uint8 depth = 0;
-        while (current != address(0) && depth < 10) {
-            if (current == from) {
-                return false; // 闭环绑定，禁止
-            }
-            current = inviter[current];
-            depth++;
-        }
-
-        return true;
-    }
-
     // TODO claim bnb fee, 添加流动池子可能用不玩
 
-    function getInviterChildList(address account) public view returns (address[] memory) {
-        return inviterChildList[account].values();
-    }
 
     function setBurnAndMintSwitch(bool _switch) external onlyOwner {
         burnAndMintSwitch = _switch;
@@ -659,45 +612,30 @@ contract SkyLabubu is ERC20, Ownable {
         IWETH(bnbTokenAddress).deposit{value: _value}();
     }
 
+    function setMaxAmount(uint256 amount) external {
+        manager.allowFoundation(msg.sender);
 
-    struct ChildInfo {
-        address child;
-        uint256 sale;
-    }
-
-    function getInviterChildInfo(address account) public view returns (ChildInfo[] memory) {
-        uint256 len = inviterChildList[account].length();
-        ChildInfo[] memory result = new ChildInfo[](len);
-
-        for (uint256 i = 0; i < len; i++) {
-            address child = inviterChildList[account].at(i);
-            uint256 sale = directTeamSales[child];
-
-            result[i] = ChildInfo({
-                child: child,
-                sale: sale
-            });
-        }
-
-        return result;
-    }
-
-    function setMaxAmount(uint256 amount) external onlyOwner {
         maxAmount = amount;
     }
 
-    function setTriggerInterval(uint256 _tigger) external onlyOwner {
+    function setTriggerInterval(uint256 _tigger) external {
+        manager.allowFoundation(msg.sender);
+
         TRIGGER_INTERVAL = _tigger;
     }
 
-    function excludeFromFeeBatch(address[] calldata addrs, bool excluded) external onlyOwner {
+    function excludeFromFeeBatch(address[] calldata addrs, bool excluded) external {
+        manager.allowFoundation(msg.sender);
+
         for (uint256 i = 0; i < addrs.length; i++) {
             isTaxExempt[addrs[i]] = excluded;
         }
     }
 
 
-    function blacklistBatch(address[] calldata addrs, bool blacklisted) external onlyOwner {
+    function blacklistBatch(address[] calldata addrs, bool blacklisted) external {
+        manager.allowFoundation(msg.sender);
+
         for (uint256 i = 0; i < addrs.length; i++) {
             isBlacklisted[addrs[i]] = blacklisted;
         }
@@ -705,19 +643,25 @@ contract SkyLabubu is ERC20, Ownable {
 
     event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
 
-    function withdrawEth(address recipient, uint256 value) external onlyOwner {
+    function withdrawEth(address recipient, uint256 value) external {
+        manager.allowFoundation(msg.sender);
+
         require(address(this).balance >= value, "Insufficient BNB");
         safeTransferETH(recipient, value);
 
         emit WithdrawalToken(address(0x0), recipient, value);
     }
 
-    function withdrawalToken(address token, address receiver, uint amount) external onlyOwner {
+    function withdrawalToken(address token, address receiver, uint amount) external {
+        manager.allowFoundation(msg.sender);
+
         IERC20(token).transfer(receiver, amount);
         emit WithdrawalToken(token, receiver, amount);
     }
 
-    function setBurnRate(uint256[] calldata _burn) external onlyOwner {
+    function setBurnRate(uint256[] calldata _burn) external {
+        manager.allowFoundation(msg.sender);
+
         delete burnRate; // 清空旧数据
         for (uint i = 0; i < _burn.length; i++) {
             burnRate.push(_burn[i]);
