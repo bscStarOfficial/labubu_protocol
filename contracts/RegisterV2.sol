@@ -18,7 +18,7 @@ contract RegisterV2 is Initializable, UUPSUpgradeable, RegisterHelper {
     }
 
     function register(address referral, address referrer) external {
-        require(manager.hasRole(keccak256("SKY_LABUBU")), "!labubu");
+        require(manager.hasRole(keccak256("SKY_LABUBU"), msg.sender), "!labubu");
 
         registerInternal(referral, referrer);
         emit Registered(referral, referrer);
