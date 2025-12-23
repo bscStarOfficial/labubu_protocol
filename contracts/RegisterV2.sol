@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "./libraries/RegisterHelper.sol";
+import "./lib/RegisterHelper.sol";
 import "./interfaces/IManager.sol";
 import "hardhat/console.sol";
 
@@ -18,6 +18,8 @@ contract RegisterV2 is Initializable, UUPSUpgradeable, RegisterHelper {
     }
 
     function register(address referral, address referrer) external {
+        require(manager.hasRole(keccak256("SKY_LABUBU")), "!labubu");
+
         registerInternal(referral, referrer);
         emit Registered(referral, referrer);
     }
