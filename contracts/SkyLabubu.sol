@@ -186,35 +186,18 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             }
             super._update(from, BLACK_ADDRESS, _amount);
             amount = amount.sub(_amount);
+            super._update(from, to, amount);
         } else if (tType == TransferType.Sell) {
-            amount = swapSellAward(from, amount);
+            super._update(from, address(this), amount);
+            swapSellAward(from, amount);
+        } else {
+            super._update(from, to, amount);
         }
-
-        super._update(from, to, amount);
     }
 
     function safeTransferETH(address to, uint value) internal {
         (bool success,) = to.call{value: value}(new bytes(0));
         require(success, 'ETH_TRANSFER_FAILED');
-    }
-
-    function _getReserves()
-    public
-    view
-    returns (uint256 rBnb, uint256 rThis, uint256 balanceBnb)
-    {
-        IPancakePair mainPair = IPancakePair(pancakePair);
-        (uint r0, uint256 r1,) = mainPair.getReserves();
-
-        if (bnbTokenAddress < address(this)) {
-            rBnb = r0;
-            rThis = r1;
-        } else {
-            rBnb = r1;
-            rThis = r0;
-        }
-
-        balanceBnb = IERC20(bnbTokenAddress).balanceOf(pancakePair);
     }
 
     enum TransferType {
@@ -231,7 +214,8 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         } else if (to == pancakePair) {
             return TransferType.AddLiquidity;
         } else if (from == pancakePair) {
-            (uint256 rBnb,, uint256 balanceBnb) = _getReserves();
+            uint256 balanceBnb = IERC20(bnbTokenAddress).balanceOf(pancakePair);
+            (uint256 rBnb,,) = IPancakePair(pancakePair).getReserves();
             if (balanceBnb < rBnb) return TransferType.RemoveLiquidity;
             else return TransferType.Buy;
         } else {
@@ -310,37 +294,33 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     }
 
     // 卖出税
-    function swapSellAward(address from, uint256 amount) internal returns (uint256) {
+    function swapSellAward(address from, uint256 amount) internal {
         // 跌几个点，手续费x2。最低5%
         uint rate = oracle.getDecline() * 2;
         if (rate < 500) rate = 500;
-
+        if (rate >= 10000) rate = 10000;
+        // 手续费
         uint256 sellFeeAmount = amount.mul(rate).div(BASE_PERCENT);
-        super._update(from, address(this), sellFeeAmount);
         tokenToEthSwap(sellFeeAmount, sellFeeAddress);
-
-        return amount.sub(sellFeeAmount);
+        // 卖出
+        uint256 leftAmount = amount.sub(sellFeeAmount);
+        if (leftAmount > 0) {
+            tokenToEthSwap(leftAmount, from);
+        }
     }
 
     function isLpValueAboveThreshold(address user) internal view returns (bool) {
         IPancakePair pair = IPancakePair(pancakePair);
 
-        (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
+        (uint112 reserveBnb, uint112 reserveThis,) = pair.getReserves();
         uint256 totalSupply = pair.totalSupply();
 
         if (totalSupply == 0) return false; // 防止除0异常
 
-        address token0 = pair.token0();
-
-        // 判断哪一侧是 BNB
-        (uint256 reserveBNB,) = token0 == bnbTokenAddress
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
-
         uint256 userLP = pair.balanceOf(user);
         uint256 userShare = userLP.mul(1e18).div(totalSupply);
 
-        uint256 bnbAmount = reserveBNB.mul(userShare).div(1e18);
+        uint256 bnbAmount = uint(reserveBnb).mul(userShare).div(1e18);
 
         uint256 lpValueInBNB = bnbAmount.mul(2);
 
