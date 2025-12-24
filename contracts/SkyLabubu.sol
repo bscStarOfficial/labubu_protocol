@@ -142,7 +142,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
         uint256 tokenAmt;
         tokenAmt = ethToTokenSwap(address(this), _value, address(this));
-        wrapEth(_value);
+        IWETH(bnbTokenAddress).deposit{value: _value}();
 
         addLiquidityEth(_value, tokenAmt, msg.sender);
     }
@@ -436,8 +436,10 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         IPancakePair(pancakePair).sync();
     }
 
-    // TODO claim bnb fee, 添加流动池子可能用不玩
-
+    function claimAbandonedBalance(address token, uint amount) external {
+        manager.allowFoundation(msg.sender);
+        IERC20(token).transfer(msg.sender, amount);
+    }
 
     function setBurnAndMintSwitch(bool _switch) external {
         manager.allowFoundation(msg.sender);
@@ -453,10 +455,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     function setDeflationAddress(address _deflationAddress) external {
         manager.allowFoundation(msg.sender);
         deflationAddress = _deflationAddress;
-    }
-
-    function wrapEth(uint256 _value) public {
-        IWETH(bnbTokenAddress).deposit{value: _value}();
     }
 
     function setMaxAmount(uint256 amount) external {
