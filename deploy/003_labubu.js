@@ -107,4 +107,4 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
   }
 
 };
-module.exports.tags = ['ava'];
+module.exports.tags = ['labubu'];
