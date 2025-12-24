@@ -9,21 +9,18 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
 
   await deploy('USDT', {
     from: deployer,
-    gasLimit: 30000000,
     args: [],
     log: true,
   });
 
   await deploy('WBNB', {
     from: deployer,
-    gasLimit: 30000000,
     args: [],
     log: true,
   });
 
   await deploy('UniswapV2Factory', {
     from: deployer,
-    gasLimit: 30000000,
     args: [deployer],
     log: true,
   });
@@ -33,7 +30,6 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
 
   await deploy('UniswapV2Router02', {
     from: deployer,
-    gasLimit: 30000000,
     args: [factory.address, wbnb.address],
     log: true,
   });
