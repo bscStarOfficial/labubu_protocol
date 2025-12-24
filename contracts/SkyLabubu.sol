@@ -24,7 +24,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     uint256 public maxAmount = 0.1 ether;
     uint16[] public InvitationAwardRates;
 
-    Distributor public _DISTRIBUTOR;
+    Distributor public swapMiddleware;
     ILabubuNFT public nft;
     ILabubuOracle public oracle;
     IManager public manager;
@@ -32,28 +32,16 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
     address public defaultInviteAddress; // 默认邀请人地址
     address public deflationAddress; // 每日1%销毁地址
-    address private sellFeeAddress; // 卖出手续费地址
+    address public sellFeeAddress; // 卖出手续费地址
     address public depositFeeAddress; // 10%入金手续费
 
     address public pancakePair;
-    mapping(address => bool) public pairs;
-    mapping(address => bool) public isTaxExempt;
-    mapping(address => bool) public isBlacklisted;
 
     mapping(address => uint256) public accountSales;
     mapping(address => uint256) public directTeamSales;
-
-    bool public updateSwitch = true;
-
-    bool private swapping;
     mapping(address => uint256) public addLiquidityUnlockTime;
 
-    address[] public lpHolders;
-    mapping(address => bool) public isLpHolder;
-    mapping(address => uint256) public lpHolderAmount;
-
     bool public burnAndMintSwitch = false;
-
     uint256[] public burnRate;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -78,6 +66,9 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         IManager _manager,
         IRegisterV2 _registerV2
     ) public initializer {
+        // bnbTokenAddress 必须是token0
+        require(address(this) > bnbTokenAddress, '!gt');
+
         __ERC20_init("Sky Labubu", "SkyLabubu");
 
         defaultInviteAddress = _defaultInviteAddress;
@@ -90,12 +81,11 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         manager = _manager;
         registerV2 = _registerV2;
 
-        _DISTRIBUTOR = new Distributor();
+        swapMiddleware = new Distributor();
 
         pancakePair = IPancakeFactory(
             IPancakeRouter02(pancakeV2Router).factory()
         ).createPair(address(this), bnbTokenAddress);
-        pairs[pancakePair] = true;
 
         _approve(address(this), pancakeV2Router, ~uint256(0));
         IERC20(bnbTokenAddress).approve(pancakeV2Router, ~uint256(0));
@@ -113,11 +103,12 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             InvitationAwardRates.push(100);
         }
 
-        isTaxExempt[address(this)] = true;
-        isTaxExempt[msg.sender] = true;
-        isTaxExempt[address(_DISTRIBUTOR)] = true;
-        isTaxExempt[sellFeeAddress] = true;
-        isTaxExempt[_minter] = true;
+//        isTaxExempt[address(this)] = true;
+//        isTaxExempt[msg.sender] = true;
+//        isTaxExempt[address(swapMiddleware)] = true;
+//        isTaxExempt[sellFeeAddress] = true;
+//        isTaxExempt[deflationAddress] = true;
+//        isTaxExempt[_minter] = true;
 
         // 初始供应量
         _mint(_minter, 210000000000 * 10 ** decimals());
@@ -160,98 +151,46 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         tokenAmt = ethToTokenSwap(address(this), _value, address(this));
         wrapEth(_value);
 
-        uint256 lpAmount = addLiquidityEth(_value, tokenAmt, msg.sender);
-        lpHolderAmount[msg.sender] = lpAmount;
-
-        _addLpHolder(msg.sender);
+        addLiquidityEth(_value, tokenAmt, msg.sender);
     }
 
-
-    event RemoveThePool(address indexed from, address indexed to, uint256 indexed amount, uint256 _lpAmount, uint256 lpAmount, uint256 time);
-    event UpdateLog(address indexed from, address indexed to, uint256 indexed amount, bool isRemove);
-
     function _update(address from, address to, uint256 amount) internal override {
-        require(!isBlacklisted[from], "ERC20: sender is blacklisted");
+        require(!isBlacklisted(from), "!blacklisted");
 
         if (amount == 1 ether && !registerV2.registered(from)) {
             registerV2.register(from, to);
         }
-        if (from == address(deflationAddress) || to == address(deflationAddress)) {
+
+        if (isTaxExempt(from) || isTaxExempt(to)) {
             super._update(from, to, amount);
             return;
         }
-        if (isTaxExempt[from] || isTaxExempt[to]) {
-            super._update(from, to, amount);
-            return;
-        }
 
-        require(updateSwitch, "!updateSwitch");
-        require(_isAddLiquidity(amount) == 0, "!addLp");
+        TransferType tType = getTransferType(from, to);
+        require(tType != TransferType.Buy, "!buy");
+        require(tType != TransferType.AddLiquidity, "!add");
 
-        bool isRemove = pairs[from] && _isRemoveLiquidity(amount) > 0;
+        if (tType == TransferType.RemoveLiquidity) {
+            uint256 _addLiquidityUnlockTime = addLiquidityUnlockTime[to];
+            require(_addLiquidityUnlockTime > 0, "There is no way to withdraw if you have not added a pool");
 
-        emit UpdateLog(from, to, amount, isRemove);
-
-        if (from != pancakeV2Router) {
-            if (isRemove && !isBlacklisted[to]) {
-                uint256 _amount;
-                IPancakePair pair = IPancakePair(pancakePair);
-                uint256 _lpAmount = pair.balanceOf(to);
-                if (_lpAmount == 0) {
-                    _lpAmount = pair.balanceOf(tx.origin);
-                }
-                uint256 lpAmount = lpHolderAmount[to];
-                if (lpAmount == 0) {
-                    lpAmount = lpHolderAmount[tx.origin];
-                }
-                // require(_lpAmount == lpAmount, "There is no way to withdraw if you have not added a pool");
-
-                uint256 _addLiquidityUnlockTime = addLiquidityUnlockTime[to];
-                if (_addLiquidityUnlockTime == 0) {
-                    _addLiquidityUnlockTime = addLiquidityUnlockTime[tx.origin];
-                }
-                require(_addLiquidityUnlockTime > 0, "There is no way to withdraw if you have not added a pool");
-                if (block.timestamp < _addLiquidityUnlockTime + 30 days) {
-                    _amount = amount.mul(burnRate[0]).div(BASE_PERCENT);
-                } else if (block.timestamp < _addLiquidityUnlockTime + 60 days) {
-                    _amount = amount.mul(burnRate[1]).div(BASE_PERCENT);
-                } else if (block.timestamp < _addLiquidityUnlockTime + 90 days) {
-                    _amount = amount.mul(burnRate[2]).div(BASE_PERCENT);
-                } else {
-                    _amount = amount.mul(burnRate[3]).div(BASE_PERCENT);
-                }
-                // addLiquidityUnlockTime[to] = 0;
-                // addLiquidityUnlockTime[tx.origin] = 0;
-                emit RemoveThePool(from, to, amount, _lpAmount, lpAmount, _addLiquidityUnlockTime);
-                super._update(from, BLACK_ADDRESS, _amount);
-                amount = amount.sub(_amount);
-            } else if (pairs[from]) {
-                require(false, "Buying is prohibited");
-            } else if (pairs[to]) {
-                if (!swapping) {
-                    swapping = true;
-                    amount = swapSellAward(from, amount);
-                    swapping = false;
-                }
+            uint256 _amount;
+            if (block.timestamp < _addLiquidityUnlockTime + 30 days) {
+                _amount = amount.mul(burnRate[0]).div(BASE_PERCENT);
+            } else if (block.timestamp < _addLiquidityUnlockTime + 60 days) {
+                _amount = amount.mul(burnRate[1]).div(BASE_PERCENT);
+            } else if (block.timestamp < _addLiquidityUnlockTime + 90 days) {
+                _amount = amount.mul(burnRate[2]).div(BASE_PERCENT);
+            } else {
+                _amount = amount.mul(burnRate[3]).div(BASE_PERCENT);
             }
+            super._update(from, BLACK_ADDRESS, _amount);
+            amount = amount.sub(_amount);
+        } else if (tType == TransferType.Sell) {
+            amount = swapSellAward(from, amount);
         }
 
         super._update(from, to, amount);
-    }
-
-
-    function _isAddLiquidity(
-        uint256 amount
-    ) internal view returns (uint256 liquidity) {
-        (uint256 rOther, uint256 rThis, uint256 balanceOther) = _getReserves();
-        uint256 amountOther;
-        if (rOther > 0 && rThis > 0) {
-            amountOther = (amount * rOther) / rThis;
-        }
-        //isAddLP
-        if (balanceOther >= rOther + amountOther) {
-            (liquidity,) = calLiquidity(balanceOther, amount, rOther, rThis);
-        }
     }
 
     function safeTransferETH(address to, uint value) internal {
@@ -262,76 +201,50 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     function _getReserves()
     public
     view
-    returns (uint256 rOther, uint256 rThis, uint256 balanceOther)
+    returns (uint256 rBnb, uint256 rThis, uint256 balanceBnb)
     {
         IPancakePair mainPair = IPancakePair(pancakePair);
         (uint r0, uint256 r1,) = mainPair.getReserves();
 
-        address tokenOther = bnbTokenAddress;
-        if (tokenOther < address(this)) {
-            rOther = r0;
+        if (bnbTokenAddress < address(this)) {
+            rBnb = r0;
             rThis = r1;
         } else {
-            rOther = r1;
+            rBnb = r1;
             rThis = r0;
         }
 
-        balanceOther = IERC20(tokenOther).balanceOf(pancakePair);
+        balanceBnb = IERC20(bnbTokenAddress).balanceOf(pancakePair);
     }
 
-    function _isRemoveLiquidity(
-        uint256 amount
-    ) internal view returns (uint256 liquidity) {
-        (uint256 rOther, , uint256 balanceOther) = _getReserves();
-        //isRemoveLP
-        if (balanceOther <= rOther) {
-            liquidity =
-                (amount * IPancakePair(pancakePair).totalSupply()) /
-                (balanceOf(pancakePair) - amount);
-        }
+    enum TransferType {
+        AddLiquidity,
+        RemoveLiquidity,
+        Sell,
+        Buy,
+        Transfer
     }
 
-    function calLiquidity(
-        uint256 balanceA,
-        uint256 amount,
-        uint256 r0,
-        uint256 r1
-    ) private view returns (uint256 liquidity, uint256 feeToLiquidity) {
-        uint256 pairTotalSupply = IPancakePair(pancakePair).totalSupply();
-        address feeTo = IPancakeFactory(
-            IPancakeRouter02(pancakeV2Router).factory()
-        ).feeTo();
-        bool feeOn = feeTo != address(0);
-        uint256 _kLast = IPancakePair(pancakePair).kLast();
-        if (feeOn) {
-            if (_kLast != 0) {
-                uint256 rootK = Math.sqrt(r0 * r1);
-                uint256 rootKLast = Math.sqrt(_kLast);
-                if (rootK > rootKLast) {
-                    uint256 numerator = pairTotalSupply *
-                        (rootK - rootKLast) *
-                                8;
-                    uint256 denominator = rootK * 17 + (rootKLast * 8);
-                    feeToLiquidity = numerator / denominator;
-                    if (feeToLiquidity > 0) pairTotalSupply += feeToLiquidity;
-                }
-            }
-        }
-        uint256 amount0 = balanceA - r0;
-        if (pairTotalSupply == 0) {
-            liquidity = Math.sqrt(amount0 * amount) - 1000;
+    function getTransferType(address from, address to) public view returns (TransferType) {
+        if (to == address(swapMiddleware)) {
+            return TransferType.Sell;
+        } else if (to == pancakePair) {
+            return TransferType.AddLiquidity;
+        } else if (from == pancakePair) {
+            (uint256 rBnb,, uint256 balanceBnb) = _getReserves();
+            if (balanceBnb < rBnb) return TransferType.RemoveLiquidity;
+            else return TransferType.Buy;
         } else {
-            liquidity = Math.min(
-                (amount0 * pairTotalSupply) / r0,
-                (amount * pairTotalSupply) / r1
-            );
+            return TransferType.Transfer;
         }
     }
 
+    function isTaxExempt(address account) public view returns (bool) {
+        return manager.hasRole(keccak256("TaxExempt"), account);
+    }
 
-    function setUpdateSwitch(bool _updateSwitch) external {
-        manager.allowFoundation(msg.sender);
-        updateSwitch = _updateSwitch;
+    function isBlacklisted(address account) public view returns (bool) {
+        return manager.hasRole(keccak256("Blacklist"), account);
     }
 
     function ethToTokenSwap(address toToken, uint256 amount, address recipient) internal returns (uint256) {
@@ -344,12 +257,12 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         IPancakeRouter02(pancakeV2Router).swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(
             0,
             path,
-            address(_DISTRIBUTOR),
+            address(swapMiddleware),
             block.timestamp + 600
         );
 
-        uint256 balanceAfter = IERC20(toToken).balanceOf(address(_DISTRIBUTOR));
-        super._update(address(_DISTRIBUTOR), recipient, balanceAfter);
+        uint256 balanceAfter = IERC20(toToken).balanceOf(address(swapMiddleware));
+        super._update(address(swapMiddleware), recipient, balanceAfter);
 
         return balanceAfter;
     }
@@ -397,7 +310,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     }
 
     // 卖出税
-    function swapSellAward(address from, uint256 amount) internal returns (uint256){
+    function swapSellAward(address from, uint256 amount) internal returns (uint256) {
         // 跌几个点，手续费x2。最低5%
         uint rate = oracle.getDecline() * 2;
         if (rate < 500) rate = 500;
@@ -406,8 +319,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         super._update(from, address(this), sellFeeAmount);
         tokenToEthSwap(sellFeeAmount, sellFeeAddress);
 
-        uint256 _amount = amount.sub(sellFeeAmount);
-        return _amount;
+        return amount.sub(sellFeeAmount);
     }
 
     function isLpValueAboveThreshold(address user) internal view returns (bool) {
@@ -438,6 +350,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
     function isChildListLpValueAboveThreshold(address account, uint256 num) internal view returns (bool) {
         uint256 validNum;
+        // TODO referrals 太多如何？
         address[] memory referrals = registerV2.getReferrals(account);
         for (uint8 i = 0; i < referrals.length; i++) {
             address c = referrals[i];
@@ -550,14 +463,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         IPancakePair(pancakePair).sync();
     }
 
-    function _addLpHolder(address account) internal {
-        // TODO 排除初始添加lp的地址
-        if (!isLpHolder[account]) {
-            isLpHolder[account] = true;
-            lpHolders.push(account);
-        }
-    }
-
     // TODO claim bnb fee, 添加流动池子可能用不玩
 
 
@@ -591,23 +496,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         manager.allowFoundation(msg.sender);
 
         TRIGGER_INTERVAL = _tigger;
-    }
-
-    function excludeFromFeeBatch(address[] calldata addrs, bool excluded) external {
-        manager.allowFoundation(msg.sender);
-
-        for (uint256 i = 0; i < addrs.length; i++) {
-            isTaxExempt[addrs[i]] = excluded;
-        }
-    }
-
-
-    function blacklistBatch(address[] calldata addrs, bool blacklisted) external {
-        manager.allowFoundation(msg.sender);
-
-        for (uint256 i = 0; i < addrs.length; i++) {
-            isBlacklisted[addrs[i]] = blacklisted;
-        }
     }
 
     event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
