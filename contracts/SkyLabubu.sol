@@ -92,13 +92,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             invitationAwardRates.push(100);
         }
 
-//        isTaxExempt[address(this)] = true;
-//        isTaxExempt[msg.sender] = true;
-//        isTaxExempt[SWAP_MIDDLEWARE)] = true;
-//        isTaxExempt[sellFeeAddress] = true;
-//        isTaxExempt[deflationAddress] = true;
-//        isTaxExempt[_minter] = true;
-
         // 初始供应量
         _mint(_minter, 210000000000 * 10 ** decimals());
     }

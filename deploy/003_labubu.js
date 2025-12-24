@@ -56,6 +56,28 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
   });
 
   let labubu = await ethers.getContract("SkyLabubu");
+
+  let roles = [
+    ['SKY_LABUBU', labubu.address],
+    ['TaxExempt', labubu.address],
+    ['TaxExempt', deployer.address],
+    ['TaxExempt', await labubu.SWAP_MIDDLEWARE()],
+    ['TaxExempt', marketAddress],
+    ['TaxExempt', minter],
+    ['TaxExempt', sellFeeAddress],
+    ['TaxExempt', deflationAddress],
+  ];
+
+  for (let item of roles) {
+    let role = keccak256(toUtf8Bytes(item[0]));
+    let account = item[1];
+    if (!await manager.hasRole(role, account)) {
+      let tx = await manager.grantRole(role, account);
+      console.log(`grant role ${item[0]} ${account}`)
+      await tx.wait();
+    }
+  }
+
   let pair = await labubu.pancakePair()
 
   await deploy('LabubuOracle', {
