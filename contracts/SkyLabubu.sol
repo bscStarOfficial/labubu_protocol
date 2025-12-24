@@ -54,13 +54,13 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         address _deflationAddress,
         address _depositFeeAddress,
         ILabubuNFT _nft,
-        ILabubuOracle _oracle,
         IManager _manager,
         IRegisterV2 _registerV2
     ) public initializer {
         // bnbTokenAddress 必须是token0
         require(address(this) > bnbTokenAddress, '!gt');
 
+        __UUPSUpgradeable_init();
         __ERC20_init("Sky Labubu", "SkyLabubu");
 
         marketAddress = _marketAddress;
@@ -69,7 +69,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         sellFeeAddress = _sellFeeAddress;
         deflationAddress = _deflationAddress;
         depositFeeAddress = _depositFeeAddress;
-        oracle = _oracle;
         manager = _manager;
         registerV2 = _registerV2;
 
@@ -302,7 +301,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     function isLpValueAboveThreshold(address user) internal view returns (bool) {
         IPancakePair pair = IPancakePair(pancakePair);
 
-        (uint112 reserveBnb, uint112 reserveThis,) = pair.getReserves();
+        (uint112 reserveBnb, ,) = pair.getReserves();
         uint256 totalSupply = pair.totalSupply();
 
         if (totalSupply == 0) return false; // 防止除0异常
@@ -433,11 +432,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         IPancakePair(pancakePair).sync();
     }
 
-    function claimAbandonedBalance(address token, uint amount) external {
-        manager.allowFoundation(msg.sender);
-        IERC20(token).transfer(msg.sender, amount);
-    }
-
     function setBurnAndMintSwitch(bool _switch) external {
         manager.allowFoundation(msg.sender);
         burnAndMintSwitch = _switch;
@@ -464,6 +458,12 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         manager.allowFoundation(msg.sender);
 
         TRIGGER_INTERVAL = _tigger;
+    }
+
+    function setOracle(ILabubuOracle _oracle) external {
+        manager.allowFoundation(msg.sender);
+
+        oracle = _oracle;
     }
 
     event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);

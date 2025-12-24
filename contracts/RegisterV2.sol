@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./lib/RegisterHelper.sol";
 import "./interfaces/IManager.sol";
 import "hardhat/console.sol";
 
-contract RegisterV2 is Initializable, UUPSUpgradeable, RegisterHelper {
+contract RegisterV2 is UUPSUpgradeable, RegisterHelper {
     IManager public manager;
 
     event Registered(address referral, address referrer);

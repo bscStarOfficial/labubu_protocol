@@ -25,6 +25,7 @@ module.exports = {
     sellFeeAddress: 3,
     deflationAddress: 4,
     depositFeeAddress: 5,
+    reserve: 6,
     A: 10,
     B: 11,
     C: 12,
