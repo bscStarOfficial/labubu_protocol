@@ -25,7 +25,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     IManager public manager;
     IRegisterV2 public registerV2;
 
-    address public defaultInviteAddress; // 默认邀请人地址
+    address public marketAddress; // 默认邀请人地址
     address public deflationAddress; // 每日1%销毁地址
     address public sellFeeAddress; // 卖出手续费地址
     address public depositFeeAddress; // 10%入金手续费
@@ -51,7 +51,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     }
 
     function initialize(
-        address _defaultInviteAddress,
+        address _marketAddress,
         address _minter,
         ILabubuNFT _nft,
         address _sellFeeAddress,
@@ -66,7 +66,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
         __ERC20_init("Sky Labubu", "SkyLabubu");
 
-        defaultInviteAddress = _defaultInviteAddress;
+        marketAddress = _marketAddress;
         nft = _nft;
 
         sellFeeAddress = _sellFeeAddress;
@@ -391,7 +391,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         // 剩余部分
         uint256 remaining = totalReward.sub(distributedReward).sub(nftAmount).sub(buyAmount);
         if (remaining > 0) {
-            safeTransferETH(defaultInviteAddress, remaining);
+            safeTransferETH(marketAddress, remaining);
         }
     }
 
