@@ -14,17 +14,12 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract Distributor {
-    constructor() {}
-}
-
 contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     using SafeMath for uint256;
 
     uint256 public maxAmount = 0.1 ether;
     uint16[] public InvitationAwardRates;
 
-    Distributor public swapMiddleware;
     ILabubuNFT public nft;
     ILabubuOracle public oracle;
     IManager public manager;
@@ -81,8 +76,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         manager = _manager;
         registerV2 = _registerV2;
 
-        swapMiddleware = new Distributor();
-
         pancakePair = IPancakeFactory(
             IPancakeRouter02(pancakeV2Router).factory()
         ).createPair(address(this), bnbTokenAddress);
@@ -105,7 +98,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
 //        isTaxExempt[address(this)] = true;
 //        isTaxExempt[msg.sender] = true;
-//        isTaxExempt[address(swapMiddleware)] = true;
+//        isTaxExempt[SWAP_MIDDLEWARE)] = true;
 //        isTaxExempt[sellFeeAddress] = true;
 //        isTaxExempt[deflationAddress] = true;
 //        isTaxExempt[_minter] = true;
@@ -209,7 +202,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     }
 
     function getTransferType(address from, address to) public view returns (TransferType) {
-        if (to == address(swapMiddleware)) {
+        if (to == address(SWAP_MIDDLEWARE)) {
             return TransferType.Sell;
         } else if (to == pancakePair) {
             return TransferType.AddLiquidity;
@@ -241,12 +234,12 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         IPancakeRouter02(pancakeV2Router).swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(
             0,
             path,
-            address(swapMiddleware),
+            SWAP_MIDDLEWARE,
             block.timestamp + 600
         );
 
-        uint256 balanceAfter = IERC20(toToken).balanceOf(address(swapMiddleware));
-        super._update(address(swapMiddleware), recipient, balanceAfter);
+        uint256 balanceAfter = IERC20(toToken).balanceOf(SWAP_MIDDLEWARE);
+        super._update(SWAP_MIDDLEWARE, recipient, balanceAfter);
 
         return balanceAfter;
     }
