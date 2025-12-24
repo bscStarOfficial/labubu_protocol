@@ -50,10 +50,10 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     function initialize(
         address _marketAddress,
         address _minter,
-        ILabubuNFT _nft,
         address _sellFeeAddress,
         address _deflationAddress,
         address _depositFeeAddress,
+        ILabubuNFT _nft,
         ILabubuOracle _oracle,
         IManager _manager,
         IRegisterV2 _registerV2

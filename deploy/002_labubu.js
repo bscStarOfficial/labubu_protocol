@@ -3,7 +3,7 @@ const {parseEther, parseUnits, keccak256, toUtf8Bytes} = require("ethers/lib/uti
 const accounts = require("../config/account")
 module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAccounts}) => {
   const {deploy} = deployments;
-  let {deployer, root, minter, sellFeeAddress, deflationAddress} = await getNamedAccounts();
+  let {deployer, root, minter, marketAddress, sellFeeAddress, deflationAddress} = await getNamedAccounts();
   const chainId = await getChainId()
 
   let wbnb = (await ethers.getContract("WBNB")).address;
@@ -12,7 +12,7 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
   let nft;
 
 
-  await deploy('LABUBU3', {
+  await deploy('SkyLabubu', {
     from: deployer,
     gasLimit: 30000000,
     args: [wbnb, router, root, minter, nft, sellFeeAddress, deflationAddress],

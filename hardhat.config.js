@@ -16,20 +16,15 @@ module.exports = {
   networks: require("./config/network"),
   paths: require("./config/paths"),
   etherscan: {
-    // Your API key for Etherscan
-    // Obtain one at https://bscscan.com/
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
   namedAccounts: {
     deployer: 0,
-    referralRoot: 1, // ava
-    avaMarketing: 2,// ava
-    avaProfit: 3,// ava
-    avaTechnology: 4,
-    stakingMarketing: 5,// staking
-    stakingTechnology: 6, // staking
-    stakingTeam: 5, // staking
-    admin: 7,
+    marketAddress: 1,
+    minter: 2,
+    sellFeeAddress: 3,
+    deflationAddress: 4,
+    depositFeeAddress: 5,
     A: 10,
     B: 11,
     C: 12,
@@ -44,8 +39,6 @@ module.exports = {
   dodoc: {
     include: [
       "Manager",
-      "Card",
-      "CardBuy"
     ],
     exclude: [
       'node_modules',
@@ -63,9 +56,6 @@ module.exports = {
     runOnCompile: true,
     only: [
       "Manager",
-      "Card",
-      "CardBuy",
-      "PowerBuy"
     ],
     except: [
       'node_modules',

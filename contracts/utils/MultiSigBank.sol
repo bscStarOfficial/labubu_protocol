@@ -193,7 +193,7 @@ contract MultiSigBank {
         if (isConfirmed(transactionId)) {
             Transaction storage transaction = transactions[transactionId];
             transaction.executed = true;
-            (bool success, bytes memory returndata) = transaction.destination.call{value : transaction.value}(transaction.data);
+            (bool success, bytes memory returndata) = transaction.destination.call{value: transaction.value}(transaction.data);
             Address.verifyCallResult(success, returndata);
             // if (success) {
             //     emit Execution(transactionId);
@@ -240,13 +240,13 @@ contract MultiSigBank {
     function addTransaction(address destination, uint value, bytes memory data, bytes32 description) internal notNull(destination) returns (uint transactionId){
         transactionId = transactionCount;
         transactions[transactionId] = Transaction({
-        description : description,
-        createTime : uint48(block.timestamp),
-        destination : destination,
-        value : value,
-        data : data,
-        submitter : msg.sender,
-        executed : false
+            description: description,
+            createTime: uint48(block.timestamp),
+            destination: destination,
+            value: value,
+            data: data,
+            submitter: msg.sender,
+            executed: false
         });
         transactionCount += 1;
         emit Submission(transactionId);
