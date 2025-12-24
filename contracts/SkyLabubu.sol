@@ -40,10 +40,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     uint256[] public burnRate;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
-        address _wBNB,
-        address _router
-    ) {
+    constructor(address _wBNB, address _router) {
         _disableInitializers();
 
         bnbTokenAddress = _wBNB;
