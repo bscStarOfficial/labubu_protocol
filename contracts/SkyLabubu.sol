@@ -18,7 +18,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     using SafeMath for uint256;
 
     uint256 public maxAmount = 0.1 ether;
-    uint16[] public InvitationAwardRates;
+    uint16[] public invitationAwardRates;
 
     ILabubuNFT public nft;
     ILabubuOracle public oracle;
@@ -88,12 +88,12 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         burnRate.push(5000);
         burnRate.push(3000);
 
-        InvitationAwardRates.push(500);
-        InvitationAwardRates.push(400);
-        InvitationAwardRates.push(300);
-        InvitationAwardRates.push(200);
+        invitationAwardRates.push(500);
+        invitationAwardRates.push(400);
+        invitationAwardRates.push(300);
+        invitationAwardRates.push(200);
         for (uint8 i = 4; i < 10; i++) {
-            InvitationAwardRates.push(100);
+            invitationAwardRates.push(100);
         }
 
 //        isTaxExempt[address(this)] = true;
@@ -348,7 +348,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         (address[] memory _referrers, uint realCount) = registerV2.getReferrers(user, 10);
         for (uint8 i = 0; i < realCount; i++) {
             address referrer = _referrers[i];
-            uint256 rate = InvitationAwardRates[i]; // 对应层级的万分比
+            uint256 rate = invitationAwardRates[i]; // 对应层级的万分比
             uint256 reward = _totalAmount.mul(rate).div(BASE_PERCENT);
             if (reward == 0) {
                 continue;
