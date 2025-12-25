@@ -22,6 +22,7 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
 
     mapping(address => Payee) public payees;
     uint256 public perDebt;
+    bool public onlyAA;
 
     struct Payee {
         uint256 released;
@@ -44,6 +45,8 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
 
         manager = _manager;
         reserve = _reserve;
+
+        onlyAA = true;
     }
 
     // 不能通过非钱包合约转，不然mint用户不对
@@ -52,6 +55,8 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
     }
 
     function safeMint(address to) public payable returns (uint256) {
+        if (onlyAA) require(isContract(to), 'onlyAA');
+
         require(msg.value == nftPrice, '!price');
 
         // 一个地址只能购买一张
@@ -131,6 +136,12 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         for (uint i = 0; i < accounts.length; i++) {
             depositWhitelist[accounts[i]] = status;
         }
+    }
+
+    function setOnlyAA(bool _onlyAA) external {
+        manager.allowFoundation(msg.sender);
+
+        onlyAA = _onlyAA;
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override {
