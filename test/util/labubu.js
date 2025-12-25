@@ -1,18 +1,20 @@
 const {parseEther, formatEther, parseUnits} = require("ethers/lib/utils");
 const common = require("./common");
+const BigNumber = require("bignumber.js");
 
 let oracle;
-
 async function oracleInit() {
   [oracle] = await common.getContractByNames(["SkyLabubu"]);
 }
 
 async function getDecline() {
-  return await oracle.getDecline()
+  let res = await oracle.getDecline()
+  return new BigNumber(res.toString()).dividedBy(1e4).toNumber();
 }
 
 async function getLabubuPrice() {
-  return await oracle.getLabubuPrice()
+  let price = await oracle.getLabubuPrice()
+  return new BigNumber(price.toString()).dividedBy(1e6).toNumber();
 }
 
 async function setOpenPrice() {
