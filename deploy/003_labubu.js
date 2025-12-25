@@ -1,5 +1,5 @@
 const {ethers} = require("hardhat");
-const {parseEther, parseUnits, keccak256, toUtf8Bytes} = require("ethers/lib/utils");
+const {parseEther, parseUnits, keccak256, toUtf8Bytes, getContractAddress} = require("ethers/lib/utils");
 const accounts = require("../config/account")
 const {AddressZero} = ethers.constants
 
@@ -31,6 +31,26 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
   let registerV2 = await ethers.getContract("RegisterV2");
 
 
+  while (true) {
+    // 获取即将部署点合约地址, +1因为先部署imp
+    let nonce = await ethers.provider.getTransactionCount(deployer) + 1
+    let addressPredict = getContractAddress({
+      from: deployer, nonce
+    })
+    console.log({nonce, addressPredict});
+    // 如果不匹配，自动增加nonce
+    if (addressPredict.toLowerCase() > wbnb.toLowerCase()) {
+      console.log(addressPredict.toLowerCase(), wbnb.toLowerCase())
+      break;
+    }
+    let tx = await ethers.provider.getSigner(deployer).sendTransaction({
+      from: deployer,
+      to: deployer,
+      value: '0'
+    });
+    await tx.wait()
+  }
+
   await deploy('SkyLabubu', {
     from: deployer,
     args: [wbnb, router],
@@ -60,7 +80,7 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
   let roles = [
     ['SKY_LABUBU', labubu.address],
     ['TaxExempt', labubu.address],
-    ['TaxExempt', deployer.address],
+    ['TaxExempt', deployer],
     ['TaxExempt', await labubu.SWAP_MIDDLEWARE()],
     ['TaxExempt', marketAddress],
     ['TaxExempt', minter],
@@ -82,7 +102,7 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
 
   await deploy('LabubuOracle', {
     from: deployer,
-    args: [wbnb, router],
+    args: [],
     proxy: {
       proxyContract: 'OpenZeppelinTransparentProxy',
       execute: {
