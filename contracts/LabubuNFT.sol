@@ -108,6 +108,11 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         return false;
     }
 
+    function fistTokenId(address account) external view returns (uint) {
+        if (balanceOf(account) == 0) return 999999;
+        else return tokenOfOwnerByIndex(account, 0);
+    }
+
     function safeTransferETH(address to, uint value) internal {
         (bool success,) = to.call{value: value}(new bytes(0));
         require(success, 'ETH_TRANSFER_FAILED');
