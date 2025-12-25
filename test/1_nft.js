@@ -44,12 +44,17 @@ describe("NFT购买", function () {
   it('nft不让转账', async () => {
     await expect(transferFrom(A, B, 0)).to.revertedWith('!transfer')
   })
+  it("only AA", async function () {
+    await nft.setOnlyAA(true);
+    await expect(safeMint(C)).to.revertedWith("onlyAA")
+  })
 })
 
 describe("NFT分红", function () {
   before(async () => {
     await initialFixture();
   })
+
 })
 
 // TODO 测试合约升级
