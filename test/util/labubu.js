@@ -1,34 +1,52 @@
 const {parseEther, formatEther, parseUnits} = require("ethers/lib/utils");
 const common = require("./common");
-const BigNumber = require("bignumber.js");
 
-let oracle;
-async function oracleInit() {
-  [oracle] = await common.getContractByNames(["SkyLabubu"]);
+let labubu;
+
+async function labubuInit() {
+  [labubu] = await common.getContractByNames(["SkyLabubu"]);
 }
 
-async function getDecline() {
-  let res = await oracle.getDecline()
-  return new BigNumber(res.toString()).dividedBy(1e4).toNumber();
+function labubuTransfer(account, to, amount) {
+  return labubu.connect(account).transfer(to.address, parseEther(amount.toString()))
 }
 
-async function getLabubuPrice() {
-  let price = await oracle.getLabubuPrice()
-  return new BigNumber(price.toString()).dividedBy(1e6).toNumber();
+async function labubuBalance(account) {
+  return await labubu.balanceOf(account.address)
 }
 
-async function setOpenPrice() {
-  return await oracle.setOpenPrice()
+async function accountSales(account) {
+  return await labubu.accountSales(account.address)
 }
 
-async function setOpenPriceByAdmin(price) {
-  return await oracle.setOpenPriceByAdmin(price)
+async function directTeamSales(account) {
+  return await labubu.directTeamSales(account.address)
+}
+
+async function addLiquidityUnlockTime(account) {
+  return await labubu.addLiquidityUnlockTime(account.address)
+}
+
+async function totalSupply() {
+  return await labubu.totalSupply()
+}
+
+
+function deposit(account, bnbAmount) {
+  return account.sendTransaction({
+    from: account.address,
+    to: labubu.address,
+    value: parseEther(bnbAmount.toString()),
+  })
 }
 
 module.exports = {
-  oracleInit,
-  getDecline,
-  getLabubuPrice,
-  setOpenPrice,
-  setOpenPriceByAdmin
+  labubuInit,
+  labubuTransfer,
+  labubuBalance,
+  accountSales,
+  directTeamSales,
+  addLiquidityUnlockTime,
+  totalSupply,
+  deposit
 }

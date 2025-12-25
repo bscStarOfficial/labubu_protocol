@@ -4,10 +4,10 @@ const common = require("./common");
 const {setBalance} = require("@nomicfoundation/hardhat-network-helpers");
 const {BigNumber} = require("bignumber.js");
 
-let ava, usdt, router;
+let labubu, wbnb, router;
 
 async function dexInit() {
-  [ava, usdt, router] = await common.getContractByNames(["AVA", 'USDT', 'UniswapV2Router02']);
+  [labubu, wbnb, router] = await common.getContractByNames(["SkyLabubu", 'WBNB', 'UniswapV2Router02']);
 }
 
 async function getAmountsOut(amountIn, contractAddresses = []) {
@@ -20,26 +20,47 @@ async function getAmountsIn(amountOut, contractAddresses = []) {
   return Number(formatEther(res[0]));
 }
 
-async function addLiquidity(account, avaAmount, usdtAmount) {
-  await router.connect(account).addLiquidity(
-    ava.address,
-    usdt.address,
-    parseEther(usdtAmount.toString()),
-    parseEther(avaAmount.toString()),
+// async function addLiquidity(account, avaAmount, usdtAmount) {
+//   await router.connect(account).addLiquidity(
+//     ava.address,
+//     usdt.address,
+//     parseEther(usdtAmount.toString()),
+//     parseEther(avaAmount.toString()),
+//     0,
+//     0,
+//     account.address, 9999999999
+//   );
+// }
+
+function addLiquidityETH(account, labubuAmount, bnbAmount) {
+  return router.connect(account).addLiquidityETH(
+    labubu.address,
+    parseEther(labubuAmount.toString()),
     0,
     0,
-    account.address, 9999999999
+    account.address, 9999999999, {
+      value: parseEther(bnbAmount.toString()),
+    }
   );
 }
 
-function swapExactTokensForTokensSupportingFeeOnTransferTokens(
-  amountIn, path, account,
-) {
-  let pathAddr = [path[0].address, path[1].address];
-  return router.connect(account).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-    parseEther(amountIn.toString()),
+function swapExactETHForTokensSupportingFeeOnTransferTokens(account, bnbAmount) {
+  return router.connect(account).swapExactETHForTokensSupportingFeeOnTransferTokens(
     0,
-    pathAddr,
+    [wbnb.address, labubu.address],
+    account.address,
+    9999999999, {
+      value: parseEther(bnbAmount.toString()),
+    }
+  );
+}
+
+
+function swapExactTokensForETHSupportingFeeOnTransferTokens(account, labubuAmount) {
+  return router.connect(account).swapExactETHForTokensSupportingFeeOnTransferTokens(
+    labubuAmount,
+    0,
+    [labubu.address, wbnb.address],
     account.address,
     9999999999
   );
@@ -50,6 +71,7 @@ module.exports = {
   dexInit,
   getAmountsOut,
   getAmountsIn,
-  addLiquidity,
-  swapE2T: swapExactTokensForTokensSupportingFeeOnTransferTokens,
+  addLiquidityETH,
+  buy: swapExactETHForTokensSupportingFeeOnTransferTokens,
+  sell: swapExactTokensForETHSupportingFeeOnTransferTokens
 }

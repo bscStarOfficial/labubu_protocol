@@ -66,40 +66,16 @@ async function tokenTransfer(token, from, to, amount) {
 async function multiRegister() {
   let registerV2 = await ethers.getContract("RegisterV2");
   let [A, B, C, D, E, F, G, H, I, J] = await getAccounts(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]);
-  await registerV2.connect(A).register(await registerV2.ROOT_USER());
-  await registerV2.connect(B).register(A.address);
-  await registerV2.connect(C).register(B.address);
-  await registerV2.connect(D).register(C.address);
-  await registerV2.connect(E).register(D.address);
-  await registerV2.connect(F).register(E.address);
-  await registerV2.connect(G).register(F.address);
-  await registerV2.connect(H).register(G.address);
-  await registerV2.connect(I).register(H.address);
-  await registerV2.connect(J).register(I.address);
-}
-
-async function multiRegisterV3() {
-  let register = await ethers.getContract("RegisterV3");
-  let [A, B, C, D, E, F, G, H, I, J] = await getAccounts(["A", "B", "C", "D", "E", "F", "G", "H", "I"]);
-
-  let initAddress = await register.ROOT_USER();
-  // 随机生成16个账户，将推荐关系拉长，测试teamYJ
-  for (let i = 0; i < 16; i++) {
-    let wR = ethers.Wallet.createRandom().connect(ethers.provider);
-    await setBalance(wR.address, parseEther('1'));
-    await register.connect(wR).register(initAddress)
-    initAddress = wR.address;
-  }
-
-  await register.connect(A).register(initAddress);
-  await register.connect(B).register(A.address);
-  await register.connect(C).register(B.address);
-  await register.connect(D).register(C.address);
-  await register.connect(E).register(D.address);
-  await register.connect(F).register(E.address);
-  await register.connect(G).register(F.address);
-  await register.connect(H).register(G.address);
-  await register.connect(I).register(H.address);
+  await registerV2.setReferrer(A, await registerV2.ROOT_USER());
+  await registerV2.setReferrer(B, A.address);
+  await registerV2.setReferrer(C, B.address);
+  await registerV2.setReferrer(D, C.address);
+  await registerV2.setReferrer(E, D.address);
+  await registerV2.setReferrer(F, E.address);
+  await registerV2.setReferrer(G, F.address);
+  await registerV2.setReferrer(H, G.address);
+  await registerV2.setReferrer(I, H.address);
+  await registerV2.setReferrer(J, I.address);
 }
 
 function toFNumber(number) {
@@ -109,7 +85,7 @@ function toFNumber(number) {
 module.exports = {
   dead: {address: '0x000000000000000000000000000000000000dEaD'},
   getAccounts, getContractByNames, multiApprove, getWallet,
-  multiRegister, multiRegisterV3, multiTransfer,
+  multiRegister, multiTransfer,
   tokenBalance,
   tokenTransfer,
   toFNumber,
