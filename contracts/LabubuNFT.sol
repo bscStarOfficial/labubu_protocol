@@ -7,6 +7,7 @@ import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/t
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IManager} from "./interfaces/IManager.sol";
+import "hardhat/console.sol";
 
 contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradeable, UUPSUpgradeable {
     uint256 public maxTokenId;   // 最大mint的id
@@ -153,16 +154,17 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
     override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
     returns (address)
     {
-        require(ownerOf(tokenId) == address(0), 'not transfer');
+        require(_ownerOf(tokenId) == address(0), 'not transfer');
 
         // 先释放奖励
-        _release(ownerOf(tokenId));
+        _release(_ownerOf(tokenId));
         _release(to);
 
         return super._update(to, tokenId, auth);
     }
 
     function _release(address account) internal virtual {
+        if (account == address(0)) return;
         uint pending = pendingProfit(account);
 
         Payee storage payee = payees[account];
