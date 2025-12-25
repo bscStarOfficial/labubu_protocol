@@ -24,7 +24,7 @@ describe("NFT购买", function () {
     await nft.setOnlyAA(false);
   })
   it('转账bnb直接购买，钱转到合约地址', async function () {
-    await expect(safeMint(A)).to.changeEtherBalance(
+    await expect(sendTransaction(A)).to.changeEtherBalance(
       reserve, parseEther("0.6")
     )
     expect(await balanceOf(A)).to.eq(1)

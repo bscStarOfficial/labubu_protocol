@@ -12,7 +12,7 @@ async function nftInit() {
 
 function sendTransaction(account) {
   return account.sendTransaction({
-    from: account,
+    from: account.address,
     to: nft.address,
     value: parseEther('0.6')
   });
