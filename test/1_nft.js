@@ -2,7 +2,7 @@ const {expect} = require("chai");
 const {ethers, deployments} = require("hardhat");
 const common = require("./util/common");
 const {loadFixture, time} = require("@nomicfoundation/hardhat-network-helpers");
-const {nftInit, sendTransaction, balanceOf, totalSupply, safeMint, setMaxTokenId, transferFrom} = require("./util/nft");
+const {nftInit, sendTransaction, balanceOf, totalSupply, safeMint, setMaxTokenId, transferFrom, sendReward, pendingProfit, claim, availableReward} = require("./util/nft");
 const {parseEther} = require("ethers/lib/utils");
 
 let deployer, reserve, A, B, C, D, E, F, G;
@@ -53,8 +53,46 @@ describe("NFT购买", function () {
 describe("NFT分红", function () {
   before(async () => {
     await initialFixture();
+    await nft.setOnlyAA(false);
   })
 
+  it('设置权重', async () => {
+    await safeMint(A)
+    await safeMint(B)
+  })
+  it('发送奖励', async () => {
+    await sendReward(1)
+  })
+  it('按权重分配', async () => {
+    expect(await pendingProfit(A)).to.eq(0.5)
+    expect(await pendingProfit(B)).to.eq(0.5)
+  })
+  it('提取奖励,收益归0', async () => {
+    await expect(claim(A)).to.changeEtherBalance(
+      A, parseEther('0.5')
+    );
+    expect(await availableReward(A)).to.eq(0)
+  })
+  it('新用户加入，没有收益', async () => {
+    await safeMint(C)
+    await safeMint(D)
+    expect(await availableReward(C)).to.eq(0)
+  })
+  it('一天后再发送奖励', async () => {
+    await sendReward(1)
+  })
+  it('按权重分配', async () => {
+    expect(await pendingProfit(A)).to.eq(0.25)
+    expect(await pendingProfit(B)).to.eq(0.75)
+    expect(await pendingProfit(C)).to.eq(0.25)
+    expect(await pendingProfit(D)).to.eq(0.25)
+  })
+  it('提取奖励,收益归0', async () => {
+    await expect(claim(B)).to.changeEtherBalance(
+      B, parseEther('0.75')
+    );
+    expect(await availableReward(B)).to.eq(0)
+  })
 })
 
 // TODO 测试合约升级

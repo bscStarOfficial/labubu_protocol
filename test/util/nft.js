@@ -52,6 +52,16 @@ function transferFrom(from, to, tokenId) {
   return nft.transferFrom(from.address, to.address, tokenId);
 }
 
+async function pendingProfit(account) {
+  let pending = await nft.pendingProfit(account.address);
+  return Number(formatEther(pending));
+}
+
+async function availableReward(account) {
+  let reward = await nft.availableReward(account.address);
+  return Number(formatEther(reward));
+}
+
 module.exports = {
   nftInit,
   sendTransaction,
@@ -62,5 +72,7 @@ module.exports = {
   maxTokenId,
   totalSupply,
   balanceOf,
-  transferFrom
+  transferFrom,
+  pendingProfit,
+  availableReward
 }
