@@ -59,6 +59,7 @@ describe("NFT分红", function () {
   it('设置权重', async () => {
     await safeMint(A)
     await safeMint(B)
+    expect(await totalSupply()).to.eq(2)
   })
   it('发送奖励', async () => {
     await sendReward(1)
