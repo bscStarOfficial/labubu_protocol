@@ -48,6 +48,10 @@ async function balanceOf(account) {
   return await nft.balanceOf(account.address)
 }
 
+function transferFrom(from, to, tokenId) {
+  return nft.transferFrom(from.address, to.address, tokenId);
+}
+
 module.exports = {
   nftInit,
   sendTransaction,
@@ -57,5 +61,6 @@ module.exports = {
   setMaxTokenId,
   maxTokenId,
   totalSupply,
-  balanceOf
+  balanceOf,
+  transferFrom
 }

@@ -2,7 +2,7 @@ const {expect} = require("chai");
 const {ethers, deployments} = require("hardhat");
 const common = require("./util/common");
 const {loadFixture, time} = require("@nomicfoundation/hardhat-network-helpers");
-const {nftInit, sendTransaction, balanceOf, totalSupply, safeMint, setMaxTokenId} = require("./util/nft");
+const {nftInit, sendTransaction, balanceOf, totalSupply, safeMint, setMaxTokenId, transferFrom} = require("./util/nft");
 const {parseEther} = require("ethers/lib/utils");
 
 let deployer, reserve, A, B, C, D, E, F, G;
@@ -34,14 +34,15 @@ describe("NFT购买", function () {
     await expect(safeMint(A)).to.revertedWith("one")
   })
   it("截止批次后，无法购买", async function () {
-    await setMaxTokenId(2)
+    await setMaxTokenId(0)
     await expect(safeMint(B)).to.revertedWith("!max")
+    await setMaxTokenId(100)
   })
   it("金额不对", async function () {
     await expect(safeMint(A, 0.59)).to.revertedWith("!price")
   })
   it('nft不让转账', async () => {
-
+    await expect(transferFrom(A, B, 0)).to.revertedWith('!transfer')
   })
 })
 
