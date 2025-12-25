@@ -178,6 +178,10 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         pending = (perDebt - payee.debt) * balanceOf(account);
     }
 
+    function availableReward(address account) public view returns (uint) {
+        return payees[account].available + pendingProfit(account);
+    }
+
     function isContract(address _address) private view returns (bool) {
         uint32 size;
         assembly {
