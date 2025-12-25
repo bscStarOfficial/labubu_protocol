@@ -24,7 +24,9 @@ describe("发行", function () {
   before(async () => {
     await initialFixture();
   })
-  it('总量2100亿')
+  it('总量2100亿', async function () {
+
+  })
   it('2000亿注入薄饼LP池）')
 })
 
