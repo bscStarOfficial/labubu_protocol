@@ -39,7 +39,7 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         __ERC721Enumerable_init();
 
         maxTokenId = 100;
-        nftPrice = 0.55 ether;
+        nftPrice = 0.6 ether;
         maxDailyAmount = 100 ether;
 
         manager = _manager;
