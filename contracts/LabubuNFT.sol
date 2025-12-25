@@ -153,6 +153,8 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
     override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
     returns (address)
     {
+        require(ownerOf(tokenId) == address(0), 'not transfer');
+
         // 先释放奖励
         _release(ownerOf(tokenId));
         _release(to);
