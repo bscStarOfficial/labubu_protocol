@@ -7,7 +7,13 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
   const chainId = await getChainId()
 
   let manager = await ethers.getContract("Manager");
+  if (chainId === "5611") {
+    reserve = deployer;
+  }
 
+  if (chainId === "56") {
+    reserve = (await ethers.getContract("MultiSigBank01")).address;
+  }
 
   await deploy('LabubuNFT', {
     from: deployer,
