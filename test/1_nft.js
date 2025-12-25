@@ -40,6 +40,9 @@ describe("NFT购买", function () {
   it("金额不对", async function () {
     await expect(safeMint(A, 0.59)).to.revertedWith("!price")
   })
+  it('nft不让转账', async () => {
+
+  })
 })
 
 describe("NFT分红", function () {
