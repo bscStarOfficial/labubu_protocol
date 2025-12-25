@@ -52,6 +52,9 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
     }
 
     function safeMint(address to) public payable returns (uint256) {
+        // 一个地址只能购买一张
+        require(balanceOf(to) == 0, 'one');
+
         uint256 tokenId = totalSupply();
         require(tokenId <= maxTokenId, '!max');
         require(msg.value == nftPrice, '!price');
