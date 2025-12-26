@@ -124,7 +124,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         require(accountSales[msg.sender] <= maxAmount, "maxAmount");
 
         address referrer = registerV2.referrers(msg.sender);
-        directTeamSales[referrer] = directTeamSales[referrer] + value;
+        directTeamSales[referrer] += value;
         addLiquidityUnlockTime[msg.sender] = block.timestamp;
 
         uint256 marketIncentives = value.mul(MARKET_INCENTIVES).div(BASE_PERCENT);
