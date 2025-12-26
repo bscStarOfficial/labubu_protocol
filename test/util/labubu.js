@@ -33,9 +33,7 @@ async function totalSupply() {
 
 
 function deposit(account, bnbAmount) {
-  return account.sendTransaction({
-    from: account.address,
-    to: labubu.address,
+  return labubu.connect(account).deposit({
     value: parseEther(bnbAmount.toString()),
   })
 }
