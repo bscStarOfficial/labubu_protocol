@@ -2,8 +2,9 @@ const {expect} = require("chai");
 const {ethers, deployments} = require("hardhat");
 const common = require("./util/common");
 const {loadFixture, time} = require("@nomicfoundation/hardhat-network-helpers");
-const {nftInit, sendTransaction, balanceOf, totalSupply, safeMint, setMaxTokenId, transferFrom, sendReward, pendingProfit, claim, availableReward} = require("./util/nft");
-const {parseEther} = require("ethers/lib/utils");
+const {nftInit, sendTransaction, balanceOf, totalSupply, safeMint, setMaxTokenId, transferFrom, sendReward, pendingProfit, claim, availableReward, setMaxDepositId, canDeposit, setDepositCheckTokenId} = require("./util/nft");
+const {parseEther, keccak256, toUtf8Bytes} = require("ethers/lib/utils");
+const {grantRole} = require("./util/common");
 
 let deployer, reserve, A, B, C, D, E, F, G;
 let manager, nft;
@@ -96,4 +97,32 @@ describe("NFT分红", function () {
   })
 })
 
-// TODO 测试合约升级
+describe("限制", function () {
+  before(async () => {
+    await initialFixture();
+    await nft.setOnlyAA(false);
+    await setDepositCheckTokenId(true);
+  })
+  it('tokenId限制', async () => {
+    await safeMint(A); // 0
+    await safeMint(B); // 1
+    await safeMint(C); // 2
+    await setMaxDepositId(1)
+    await grantRole('SKY_LABUBU', deployer);
+
+    await expect(canDeposit(C, 0.1)).to.revertedWith('!maxDepositId')
+    await canDeposit(B, 0);
+  })
+  it('日入金总量限制', async () => {
+    await expect(canDeposit(C, 100.1)).to.revertedWith('!maxDailyAmount')
+  })
+  it('EOA地址限制', async function () {
+    await nft.setOnlyAA(true);
+    await expect(canDeposit(C, 0.1)).to.revertedWith('onlyAA')
+  })
+  it('白名单不受限制', async () => {
+    await grantRole('Deposit_Whitelist', C);
+    await canDeposit(C, 0.1);
+  })
+
+})
