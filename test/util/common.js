@@ -1,5 +1,5 @@
 const {ethers, deployments, getNamedAccounts, getUnnamedAccounts} = require("hardhat");
-const {formatEther, parseEther} = require("ethers/lib/utils")
+const {formatEther, parseEther, keccak256, toUtf8Bytes} = require("ethers/lib/utils")
 const {setBalance} = require("@nomicfoundation/hardhat-network-helpers");
 
 async function getAccounts(names = []) {
@@ -82,6 +82,14 @@ function toFNumber(number) {
   return Number(formatEther(number));
 }
 
+async function grantRole(role, account) {
+  let manager = await ethers.getContract("Manager");
+  return await manager.grantRole(
+    keccak256(toUtf8Bytes(role)),
+    account.address
+  )
+}
+
 module.exports = {
   dead: {address: '0x000000000000000000000000000000000000dEaD'},
   getAccounts, getContractByNames, multiApprove, getWallet,
@@ -89,4 +97,5 @@ module.exports = {
   tokenBalance,
   tokenTransfer,
   toFNumber,
+  grantRole
 }

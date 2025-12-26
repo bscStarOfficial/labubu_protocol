@@ -28,8 +28,16 @@ function claim(account) {
   return nft.claim(account.address);
 }
 
+function setMaxDepositId(id) {
+  return nft.setMaxDepositId(id);
+}
+
 function sendReward(amount) {
   return nft.sendReward({value: parseEther(amount.toString())});
+}
+
+function setDepositCheckTokenId(b) {
+  return nft.setDepositCheckTokenId(b);
 }
 
 function setMaxTokenId(id) {
@@ -46,6 +54,10 @@ async function totalSupply() {
 
 async function balanceOf(account) {
   return await nft.balanceOf(account.address)
+}
+
+function canDeposit(account, value) {
+  return nft.canDeposit(account.address, parseEther(value.toString()))
 }
 
 function transferFrom(from, to, tokenId) {
@@ -74,5 +86,8 @@ module.exports = {
   balanceOf,
   transferFrom,
   pendingProfit,
-  availableReward
+  availableReward,
+  setMaxDepositId,
+  canDeposit,
+  setDepositCheckTokenId
 }

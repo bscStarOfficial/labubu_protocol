@@ -5,7 +5,7 @@ const {loadFixture, time} = require("@nomicfoundation/hardhat-network-helpers");
 const {nftInit, sendTransaction, balanceOf, totalSupply, safeMint, setMaxTokenId, transferFrom, sendReward, pendingProfit, claim, availableReward} = require("./util/nft");
 const {parseEther} = require("ethers/lib/utils");
 
-let deployer, reserve, A, B, C, D, E, F, G;
+let deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress, A, B, C, D, E, F, G;
 let labubu, nft, manager, oracle, registerV2;
 
 async function initialFixture() {
@@ -25,7 +25,7 @@ describe("发行", function () {
     await initialFixture();
   })
   it('总量2100亿', async function () {
-
+    expect(await totalSupply()).to.eq(parseEther("210000000000"))
   })
   it('2000亿注入薄饼LP池）')
 })
@@ -33,12 +33,6 @@ describe("发行", function () {
 describe("入金", function () {
   before(async () => {
     await initialFixture();
-  })
-  describe("限制", function () {
-    it('tokenId限制')
-    it('白名单不受限制')
-    it('日入金总量限制')
-    it('EOA地址限制')
   })
   describe("bnb入金", function () {
     it('最低入金0.1BNB')
