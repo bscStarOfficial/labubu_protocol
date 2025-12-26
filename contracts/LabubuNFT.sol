@@ -159,7 +159,7 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         nftPrice = _nftPrice;
     }
 
-    function setDepositCheckTokenId(uint256 _depositCheckTokenId) external {
+    function setDepositCheckTokenId(bool _depositCheckTokenId) external {
         manager.allowFoundation(msg.sender);
         depositCheckTokenId = _depositCheckTokenId;
     }
