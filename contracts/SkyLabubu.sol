@@ -376,14 +376,14 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         }
 
         //项目方 10%
-        uint256 buyAmount = 0;
+        uint256 depositFeeAmount = 0;
         if (depositFeeAddress != address(0)) {
-            buyAmount = _totalAmount.mul(1000).div(BASE_PERCENT);
-            safeTransferETH(depositFeeAddress, buyAmount);
+            depositFeeAmount = _totalAmount.mul(1000).div(BASE_PERCENT);
+            safeTransferETH(depositFeeAddress, depositFeeAmount);
         }
 
         // 剩余部分
-        uint256 remaining = totalReward.sub(distributedReward).sub(nftAmount).sub(buyAmount);
+        uint256 remaining = totalReward.sub(distributedReward).sub(nftAmount).sub(depositFeeAmount);
         if (remaining > 0) {
             safeTransferETH(marketAddress, remaining);
         }
