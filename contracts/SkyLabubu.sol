@@ -106,7 +106,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         uint256 value = msg.value;
 
         // 早期入金限制
-        require(nft.canDeposit(msg.sender, value), '!can');
+        nft.canDeposit(msg.sender, value);
 
         if (value == 0.6 ether) {
             nft.safeMint{value: value}(msg.sender);
