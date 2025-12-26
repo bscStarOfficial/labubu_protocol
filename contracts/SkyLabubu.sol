@@ -115,8 +115,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
         // 1e17 原版限制isContract(msg.sender)
         if (value < MIN_AMOUNT || value > maxAmount || value % 0.1 ether > 0) {
-            safeTransferETH(msg.sender, value);
-            return;
+            revert("!value");
         }
 
         require(registerV2.registered(msg.sender), "!registered");
