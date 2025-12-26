@@ -13,11 +13,12 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "hardhat/console.sol";
 
 contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     using SafeMath for uint256;
 
-    uint256 public maxAmount = 0.1 ether;
+    uint256 public maxAmount;
     uint16[] public invitationAwardRates;
 
     ILabubuNFT public nft;
@@ -91,12 +92,17 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         for (uint8 i = 4; i < 10; i++) {
             invitationAwardRates.push(100);
         }
+        maxAmount = 0.1 ether;
 
         // 初始供应量
         _mint(_minter, 210000000000 * 10 ** decimals());
     }
 
     receive() external payable {
+       deposit();
+    }
+
+    function deposit() public payable {
         uint256 value = msg.value;
 
         // 早期入金限制
