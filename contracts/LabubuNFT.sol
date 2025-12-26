@@ -15,7 +15,7 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
     uint256 public maxDailyAmount; // 每日最大可入金数量
 
     mapping(uint256 => uint256) public dailyAmount;
-    mapping(address => bool) public depositWhitelist; // labubu入金白名单
+    mapping(address => bool) public depositWhitelist; // labubu入金白名单 此字段废弃
     uint256 public nftPrice;
 
     IManager public manager;
@@ -97,7 +97,8 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         if (dailyAmount[day] + value >= maxDailyAmount) return false;
         dailyAmount[day] += value;
 
-        if (depositWhitelist[account]) return true;
+        if (manager.hasRole(keccak256('Deposit_Whitelist'), account))
+            return true;
 
         uint balance = balanceOf(account);
         for (uint i = 0; i < balance; i++) {
