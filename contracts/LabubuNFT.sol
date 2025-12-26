@@ -24,6 +24,7 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
     mapping(address => Payee) public payees;
     uint256 public perDebt;
     bool public onlyAA;
+    bool public depositCheckTokenId;
 
     struct Payee {
         uint256 released;
@@ -102,7 +103,10 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
         dailyAmount[day] += value;
         require(dailyAmount[day] <= maxDailyAmount, "!maxDailyAmount");
 
-        if (!manager.hasRole(keccak256('Deposit_Whitelist'), account)) {
+        if (manager.hasRole(keccak256('Deposit_Whitelist'), account)) return;
+        if (onlyAA) require(isContract(account), 'onlyAA');
+
+        if (depositCheckTokenId) {
             require(balanceOf(account) > 0, "balance 0");
             require(tokenOfOwnerByIndex(account, 0) <= maxDepositId, "!maxDepositId");
         }
@@ -153,6 +157,11 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
     function setNftPrice(uint256 _nftPrice) external {
         manager.allowFoundation(msg.sender);
         nftPrice = _nftPrice;
+    }
+
+    function setDepositCheckTokenId(uint256 _depositCheckTokenId) external {
+        manager.allowFoundation(msg.sender);
+        depositCheckTokenId = _depositCheckTokenId;
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override {
