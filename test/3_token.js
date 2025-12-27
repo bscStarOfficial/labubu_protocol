@@ -72,28 +72,28 @@ describe("入金", function () {
       )
     })
     it('1代-5%-直推1个有效用户', async function () {
-      await inviteReferral(w[9], 1)
+      // await inviteReferral(w[9], 1)
       await deposit(w[9], 0.1)
       await expect(deposit(w[10], 0.1)).changeEtherBalance(
         w[9], parseEther("0.005")
       )
     })
     it('2代-4%-直推3个有效用户', async function () {
-      await inviteReferral(w[8], 3)
+      await inviteReferral(w[8], 2)
       await deposit(w[8], 0.1)
       await expect(deposit(w[10], 0.1)).changeEtherBalance(
         w[8], parseEther("0.004")
       )
     })
     it('3代-3%-直推5个有效用户', async function () {
-      await inviteReferral(w[7], 5)
+      await inviteReferral(w[7], 4)
       await deposit(w[7], 0.1)
       await expect(deposit(w[10], 0.1)).changeEtherBalance(
         w[7], parseEther("0.003")
       )
     })
     it('4代-2%-直推7个有效用户', async function () {
-      await inviteReferral(w[6], 7)
+      await inviteReferral(w[6], 6)
       await deposit(w[6], 0.1)
       await expect(deposit(w[10], 0.1)).changeEtherBalance(
         w[6], parseEther("0.002")
@@ -101,7 +101,7 @@ describe("入金", function () {
     })
     it('5到10代-1%-直推10个有效用户', async function () {
       for (let i = 5; i >= 0; i--) {
-        await inviteReferral(w[i], 10)
+        await inviteReferral(w[i], 9)
         await deposit(w[i], 0.1)
       }
       await expect(deposit(w[10], 0.1)).changeEtherBalances(
