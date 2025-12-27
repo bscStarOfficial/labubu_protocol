@@ -40,16 +40,20 @@ async function inviteReferral(account, count) {
   let minter = await common.getWallet("minter");
   for (let i = 0; i < count; i++) {
     let wallet = Wallet.createRandom().connect(provider);
+    await setBalance(wallet.address, parseEther('10000'));
+
     await labubuTransfer(minter, wallet, 1);
     // 绑定推荐关系
     await labubuTransfer(wallet, account, 1);
-    await setBalance(wallet.address, parseEther('10000'));
     // 白名单入金
     await grantRole('Deposit_Whitelist', wallet);
     await deposit(wallet, 0.1)
   }
 }
 
+async function setMaxAmount(amount) {
+  await labubu.setMaxAmount(parseEther(amount.toString()));
+}
 
 function deposit(account, bnbAmount) {
   return labubu.connect(account).deposit({
@@ -66,5 +70,6 @@ module.exports = {
   addLiquidityUnlockTime,
   totalSupply,
   deposit,
-  inviteReferral
+  inviteReferral,
+  setMaxAmount
 }

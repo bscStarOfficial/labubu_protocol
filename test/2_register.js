@@ -4,6 +4,7 @@ const common = require("./util/common");
 const {nftInit, sendTransaction, balanceOf, totalSupply, safeMint, setMaxTokenId, transferFrom, sendReward, pendingProfit, claim, availableReward} = require("./util/nft");
 const {deposit, labubuTransfer, labubuInit} = require("./util/labubu");
 const {keccak256, toUtf8Bytes} = require("ethers/lib/utils");
+const {setReferrer, referrer} = require("./util/registerV2");
 
 let deployer, minter, A, B, C, D, E, F, G;
 let labubu, nft, manager, oracle, registerV2;
@@ -44,11 +45,3 @@ describe("推荐关系", function () {
     expect(await referrer(B)).to.eq(A.address)
   });
 })
-
-async function referrer(account) {
-  return await registerV2.referrers(account.address)
-}
-
-async function setReferrer(referral, referrer) {
-  return await registerV2.setReferrer(referral.address, referrer.address);
-}

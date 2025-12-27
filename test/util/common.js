@@ -79,23 +79,6 @@ async function multiRegister() {
   await registerV2.setReferrer(J, I.address);
 }
 
-async function register18() {
-  let registerV2 = await ethers.getContract("RegisterV2");
-  let wallets = [];
-  let root = await registerV2.ROOT_USER();
-  let provider = ethers.provider;
-
-  for (let i = 0; i < 18; i++) {
-    let wallet = Wallet.createRandom().connect(provider);
-    await setBalance(wallet.address, parseEther('10000'));
-    let referrer = i === 0 ? root : wallets[i - 1].address;
-    await registerV2.setReferrer(wallet.address, referrer);
-    wallets.push(wallet);
-  }
-
-  return wallets;
-}
-
 function toFNumber(number) {
   return Number(formatEther(number));
 }
@@ -116,5 +99,4 @@ module.exports = {
   tokenTransfer,
   toFNumber,
   grantRole,
-  register18
 }

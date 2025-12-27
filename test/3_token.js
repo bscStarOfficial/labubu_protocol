@@ -2,48 +2,48 @@ const {expect} = require("chai");
 const {ethers, deployments} = require("hardhat");
 const common = require("./util/common");
 const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-network-helpers");
-const {nftInit, sendTransaction, balanceOf, totalSupply, safeMint, setMaxTokenId, transferFrom, sendReward, pendingProfit, claim, availableReward} = require("./util/nft");
+const {nftInit} = require("./util/nft");
 const {parseEther} = require("ethers/lib/utils");
-const {multiRegister, grantRole, register18} = require("./util/common");
-const {deposit, inviteReferral} = require("./util/labubu");
-const {addLiquidityETH} = require("./util/dex");
+const {grantRole} = require("./util/common");
+const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount} = require("./util/labubu");
+const {addLiquidityETH, dexInit} = require("./util/dex");
+const {setReferrer, register18} = require("./util/registerV2");
 
 let deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress;
-let labubu, nft, manager, oracle, registerV2;
+let labubu, nft, manager, oracle, registerV2, router;
 
 let w = [];
 
 async function initialFixture() {
   await deployments.fixture();
   await nftInit();
+  await dexInit();
+  await labubuInit();
 
-  [labubu, nft, manager, oracle, registerV2] = await common.getContractByNames([
-    'SkyLabubu', "LabubuNFT", 'Manager', 'LabubuOracle', 'RegisterV2'
+  [labubu, nft, manager, oracle, registerV2, router] = await common.getContractByNames([
+    'SkyLabubu', "LabubuNFT", 'Manager', 'LabubuOracle', 'RegisterV2', "UniswapV2Router02"
   ]);
   [deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress] = await common.getAccounts(
     ["deployer", "marketAddress", "minter", "sellFeeAddress", "deflationAddress", "depositFeeAddress"]
   );
 
   w = await register18()
+  for (let wi of w) {
+    await grantRole('Deposit_Whitelist', wi);
+  }
+  await nft.setOnlyAA(false);
+  await setReferrer(minter)
 
-  await setBalance(minter, parseEther('10000'))
+  await common.multiApprove(labubu, [router]);
+  await setBalance(minter.address, parseEther('100000'))
   await addLiquidityETH(minter, 1000_0000, 1_0000);
-}
 
-describe("发行", function () {
-  before(async () => {
-    await initialFixture();
-  })
-  it('总量2100亿', async function () {
-    expect(await totalSupply()).to.eq(parseEther("210000000000"))
-  })
-})
+  await setMaxAmount(1000);
+}
 
 describe("入金", function () {
   before(async () => {
     await initialFixture();
-    await multiRegister()
-    await grantRole('Deposit_Whitelist', A);
   })
   describe("bnb入金", function () {
     it('最低入金0.1BNB', async function () {
@@ -65,42 +65,49 @@ describe("入金", function () {
       await initialFixture()
     })
     it("自身绩效不达标无法获取奖励", async function () {
-      // 充值 deposit(w[9], 0.1)
+      // 充值
+      // await deposit(w[9], 0.1)
       await expect(deposit(w[10], 0.1)).changeEtherBalance(
         w[9], 0
       )
     })
     it('1代-5%-直推1个有效用户', async function () {
       await inviteReferral(w[9], 1)
+      await deposit(w[9], 0.1)
       await expect(deposit(w[10], 0.1)).changeEtherBalance(
         w[9], parseEther("0.005")
       )
     })
     it('2代-4%-直推3个有效用户', async function () {
       await inviteReferral(w[8], 3)
+      await deposit(w[8], 0.1)
       await expect(deposit(w[10], 0.1)).changeEtherBalance(
         w[8], parseEther("0.004")
       )
     })
     it('3代-3%-直推5个有效用户', async function () {
       await inviteReferral(w[7], 5)
+      await deposit(w[7], 0.1)
       await expect(deposit(w[10], 0.1)).changeEtherBalance(
         w[7], parseEther("0.003")
       )
     })
     it('4代-2%-直推7个有效用户', async function () {
       await inviteReferral(w[6], 7)
+      await deposit(w[6], 0.1)
       await expect(deposit(w[10], 0.1)).changeEtherBalance(
         w[6], parseEther("0.002")
       )
     })
     it('5到10代-1%-直推10个有效用户', async function () {
-      for (let i = 5; i >= 0; i++) {
+      for (let i = 5; i >= 0; i--) {
         await inviteReferral(w[i], 10)
+        await deposit(w[i], 0.1)
       }
       await expect(deposit(w[10], 0.1)).changeEtherBalances(
         [w[5], w[4], w[3], w[2], w[1], w[0]],
         [
+          parseEther("0.001"),
           parseEther("0.001"),
           parseEther("0.001"),
           parseEther("0.001"),
@@ -150,4 +157,13 @@ describe("白名单", function () {
     await initialFixture();
   })
   it("交易无手续费")
+})
+
+describe("发行", function () {
+  before(async () => {
+    await initialFixture();
+  })
+  it('总量2100亿', async function () {
+    expect(await totalSupply()).to.eq(parseEther("210000000000"))
+  })
 })
