@@ -5,8 +5,8 @@ const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-networ
 const {nftInit} = require("./util/nft");
 const {parseEther} = require("ethers/lib/utils");
 const {grantRole} = require("./util/common");
-const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount} = require("./util/labubu");
-const {addLiquidityETH, dexInit} = require("./util/dex");
+const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove} = require("./util/labubu");
+const {addLiquidityETH, dexInit, buy} = require("./util/dex");
 const {setReferrer, register18} = require("./util/registerV2");
 
 let deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress;
@@ -121,8 +121,13 @@ describe("入金", function () {
     })
   })
   describe("无法通过pancake入金", function () {
-    it("无法买入")
-    it("无法添加流动性")
+    it("无法买入", async function () {
+      await expect(buy(w[0], 1)).to.revertedWith("!buy")
+    })
+    it("无法添加流动性", async function () {
+      await labubuApprove(w[0], router, 10000000000)
+      await expect(addLiquidityETH(w[0], 1, 1)).to.revertedWith("!add")
+    })
   })
 })
 

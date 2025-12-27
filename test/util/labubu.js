@@ -15,6 +15,10 @@ function labubuTransfer(account, to, amount) {
   return labubu.connect(account).transfer(to.address, parseEther(amount.toString()))
 }
 
+function labubuApprove(account, to, amount) {
+  return labubu.connect(account).approve(to.address, parseEther(amount.toString()))
+}
+
 async function labubuBalance(account) {
   return await labubu.balanceOf(account.address)
 }
@@ -64,6 +68,7 @@ function deposit(account, bnbAmount) {
 module.exports = {
   labubuInit,
   labubuTransfer,
+  labubuApprove,
   labubuBalance,
   accountSales,
   directTeamSales,
