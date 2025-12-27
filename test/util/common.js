@@ -1,6 +1,7 @@
 const {ethers, deployments, getNamedAccounts, getUnnamedAccounts} = require("hardhat");
 const {formatEther, parseEther, keccak256, toUtf8Bytes} = require("ethers/lib/utils")
 const {setBalance} = require("@nomicfoundation/hardhat-network-helpers");
+const {Wallet} = require("ethers");
 
 async function getAccounts(names = []) {
   let accounts = [];
@@ -78,6 +79,23 @@ async function multiRegister() {
   await registerV2.setReferrer(J, I.address);
 }
 
+async function register18() {
+  let wallets = [];
+  let root = await registerV2.ROOT_USER();
+  let provider = ethers.provider;
+  let registerV2 = await ethers.getContract("RegisterV2");
+
+  for (let i = 0; i < 18; i++) {
+    let wallet = Wallet.createRandom().connect(provider);
+    await setBalance(wallet.address, parseEther('10000'));
+    let referrer = i === 0 ? root : wallets[i - 1].address;
+    await registerV2.connect(wallet).register(referrer);
+    wallets.push(wallet);
+  }
+
+  return wallets;
+}
+
 function toFNumber(number) {
   return Number(formatEther(number));
 }
@@ -97,5 +115,6 @@ module.exports = {
   tokenBalance,
   tokenTransfer,
   toFNumber,
-  grantRole
+  grantRole,
+  register18
 }
