@@ -25,8 +25,8 @@ contract RegisterV2 is UUPSUpgradeable, RegisterHelper {
 
     function setReferrer(address referral, address referrer) external {
         manager.allowFoundation(msg.sender);
-
-        referrers[referral] = referrer;
+        registerInternal(referral, referrer);
+        emit Registered(referral, referrer);
     }
 
     // 如果newImplementation没有upgradeTo方法，则无法继续升级
