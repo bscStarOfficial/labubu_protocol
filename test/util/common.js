@@ -80,16 +80,16 @@ async function multiRegister() {
 }
 
 async function register18() {
+  let registerV2 = await ethers.getContract("RegisterV2");
   let wallets = [];
   let root = await registerV2.ROOT_USER();
   let provider = ethers.provider;
-  let registerV2 = await ethers.getContract("RegisterV2");
 
   for (let i = 0; i < 18; i++) {
     let wallet = Wallet.createRandom().connect(provider);
     await setBalance(wallet.address, parseEther('10000'));
     let referrer = i === 0 ? root : wallets[i - 1].address;
-    await registerV2.connect(wallet).register(referrer);
+    await registerV2.setReferrer(wallet.address, referrer);
     wallets.push(wallet);
   }
 
