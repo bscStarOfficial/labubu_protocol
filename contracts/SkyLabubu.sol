@@ -161,8 +161,8 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         if (tType == TransferType.RemoveLiquidity) {
             // 计算lp数量
             uint lpAmount = calLiquidityByLububu(amount);
-            require(accountLpAmount[from] >= lpAmount, "!added lp amount");
-            accountLpAmount[from] -= lpAmount;
+            require(accountLpAmount[to] >= lpAmount, "!added lp amount");
+            accountLpAmount[to] -= lpAmount;
 
             // 记录添加的lpAmount
             uint256 _addLiquidityUnlockTime = addLiquidityUnlockTime[to];
