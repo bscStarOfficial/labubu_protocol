@@ -38,8 +38,14 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     mapping(address => uint256) public addLiquidityUnlockTime;
     mapping(address => uint256) public accountLpAmount;
 
-    bool public burnAndMintSwitch = false;
-    uint256[] public burnRate;
+    uint256[] public removeLpBurnRate;
+
+    bool public burnAndMintSwitch;
+    uint256 public lastTriggerTime;
+
+    event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
+    event DistributeReferralReward(address indexed from, address indexed to, uint8 indexed level, uint256 amount);
+    event TriggerDailyBurnAndMint(uint256 indexed liquidityPairBalance, uint256 indexed burnAmount, uint256 indexed holdLPAwardAmount, uint256 rounds);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _wBNB, address _router) {
@@ -81,10 +87,10 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         _approve(address(this), pancakeV2Router, ~uint256(0));
         IERC20(bnbTokenAddress).approve(pancakeV2Router, ~uint256(0));
 
-        burnRate.push(9000);
-        burnRate.push(7000);
-        burnRate.push(5000);
-        burnRate.push(3000);
+        removeLpBurnRate.push(9000);
+        removeLpBurnRate.push(7000);
+        removeLpBurnRate.push(5000);
+        removeLpBurnRate.push(3000);
 
         invitationAwardRates.push(500);
         invitationAwardRates.push(400);
@@ -169,13 +175,13 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
             uint256 _amount;
             if (block.timestamp < _addLiquidityUnlockTime + 30 days) {
-                _amount = amount.mul(burnRate[0]).div(BASE_PERCENT);
+                _amount = amount.mul(removeLpBurnRate[0]).div(BASE_PERCENT);
             } else if (block.timestamp < _addLiquidityUnlockTime + 60 days) {
-                _amount = amount.mul(burnRate[1]).div(BASE_PERCENT);
+                _amount = amount.mul(removeLpBurnRate[1]).div(BASE_PERCENT);
             } else if (block.timestamp < _addLiquidityUnlockTime + 90 days) {
-                _amount = amount.mul(burnRate[2]).div(BASE_PERCENT);
+                _amount = amount.mul(removeLpBurnRate[2]).div(BASE_PERCENT);
             } else {
-                _amount = amount.mul(burnRate[3]).div(BASE_PERCENT);
+                _amount = amount.mul(removeLpBurnRate[3]).div(BASE_PERCENT);
             }
             super._update(from, BLACK_ADDRESS, _amount);
             amount = amount.sub(_amount);
@@ -338,7 +344,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         return validNum >= num;
     }
 
-    event DistributeReferralReward(address indexed from, address indexed to, uint8 indexed level, uint256 amount);
 
     function _distributeReferralReward(address user, uint256 _totalAmount, uint256 totalReward) internal {
         uint256 distributedReward = 0;
@@ -392,13 +397,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             safeTransferETH(marketAddress, remaining);
         }
     }
-
-
-    uint256 public lastTriggerTime = block.timestamp;
-    uint256 public holdLPAward;
-    uint256 public TRIGGER_INTERVAL = 6 hours;
-
-    event TriggerDailyBurnAndMint(uint256 indexed liquidityPairBalance, uint256 indexed burnAmount, uint256 indexed holdLPAwardAmount, uint256 rounds);
 
     function triggerDailyBurnAndMint() external {
         if (!burnAndMintSwitch) return;
@@ -468,8 +466,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         oracle = _oracle;
     }
 
-    event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
-
     function withdrawEth(address recipient, uint256 value) external {
         manager.allowFoundation(msg.sender);
 
@@ -486,12 +482,12 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         emit WithdrawalToken(token, receiver, amount);
     }
 
-    function setBurnRate(uint256[] calldata _burn) external {
+    function setRemoveLpBurnRate(uint256[] calldata _burn) external {
         manager.allowFoundation(msg.sender);
 
-        delete burnRate; // 清空旧数据
+        delete removeLpBurnRate; // 清空旧数据
         for (uint i = 0; i < _burn.length; i++) {
-            burnRate.push(_burn[i]);
+            removeLpBurnRate.push(_burn[i]);
         }
     }
 
