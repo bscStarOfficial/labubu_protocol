@@ -47,6 +47,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
     event DistributeReferralReward(address indexed from, address indexed to, uint8 indexed level, uint usdtValue, uint bnbValue);
     event TriggerDailyBurnAndMint(uint256 indexed liquidityPairBalance, uint256 indexed burnAmount, uint256 indexed holdLPAwardAmount, uint256 rounds);
+    event LpRedeemed(address indexed user, uint labubuPrice, uint backAmount, uint burnAmount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _wBNB, address _router) {
@@ -190,6 +191,8 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             super._update(from, BLACK_ADDRESS, _amount);
             amount = amount.sub(_amount);
             super._update(from, to, amount);
+
+            emit LpRedeemed(to, oracle.getLabubuPrice(), amount, _amount);
         } else if (tType == TransferType.Sell) {
             swapSellAward(from, amount);
         } else {

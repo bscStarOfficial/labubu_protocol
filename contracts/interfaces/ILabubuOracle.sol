@@ -5,4 +5,5 @@ interface ILabubuOracle {
     function setOpenPrice() external;
     function getDecline() external view returns (uint);
     function getBnbPrice() external view returns (uint price);
+    function getLabubuPrice() external view returns (uint price);
 }
