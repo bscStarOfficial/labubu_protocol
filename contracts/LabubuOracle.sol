@@ -6,6 +6,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IManager} from "./interfaces/IManager.sol";
 import {IPancakePair} from "./interfaces/IPancake.sol";
+import "hardhat/console.sol";
 
 contract LabubuOracle is Initializable, UUPSUpgradeable {
     IManager public manager;
@@ -39,7 +40,7 @@ contract LabubuOracle is Initializable, UUPSUpgradeable {
         if (currentPrice >= openPrice) return 0;
 
         uint rate = (openPrice - currentPrice) * 1e4 / openPrice;
-        return rate - rate % 1e4;
+        return rate - rate % 1e2;
     }
 
     // @notice star price 价格精度12

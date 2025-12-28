@@ -78,6 +78,13 @@ async function mockDeposit(account, bnbAmount) {
   return toFNumber(lpAmount)
 }
 
+function sell(account, amount) {
+  return labubu.connect(account).transfer(
+    '0x0000000000000000000000000000000000000001',
+    parseEther(amount.toString()),
+  )
+}
+
 module.exports = {
   labubuInit,
   labubuTransfer,
@@ -91,5 +98,6 @@ module.exports = {
   inviteReferral,
   setMaxAmount,
   mockDeposit,
-  accountLpAmount
+  accountLpAmount,
+  sell
 }

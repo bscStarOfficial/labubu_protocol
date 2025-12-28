@@ -87,6 +87,14 @@ function toFNumber(number, decimals = 6) {
   return Number(res);
 }
 
+function toF12Number(number, decimals = 6) {
+  let res = new BigNumber(number.toString())
+    .dividedBy(1e12)
+    .toFixed(decimals, 1);
+  return Number(res);
+}
+
+
 async function grantRole(role, account) {
   let manager = await ethers.getContract("Manager");
   return await manager.grantRole(
@@ -108,4 +116,5 @@ module.exports = {
   tokenTransfer,
   toFNumber,
   grantRole,
+  toF12Number
 }

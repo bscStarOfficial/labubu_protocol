@@ -5,9 +5,11 @@ const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-networ
 const {nftInit} = require("./util/nft");
 const {parseEther, formatEther} = require("ethers/lib/utils");
 const {grantRole, dead} = require("./util/common");
-const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount} = require("./util/labubu");
+const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell} = require("./util/labubu");
 const {addLiquidityETH, dexInit, buy, getLabubuAmountByLp, removeLiquidityETH, lpApprove, removeLiquidity, lpBalance} = require("./util/dex");
 const {setReferrer, register18} = require("./util/registerV2");
+const {setOpenPrice, getLabubuPrice, getOpenPrice, setOpenPriceByAdmin, getDecline} = require("./util/oracle");
+const BigNumber = require("bignumber.js");
 
 let deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress;
 let labubu, nft, manager, oracle, registerV2, router;
@@ -36,10 +38,62 @@ async function initialFixture() {
 
   await common.multiApprove(labubu, [router]);
   await setBalance(minter.address, parseEther('100000'))
-  await addLiquidityETH(minter, 1_0000, 1_0000);
+  await addLiquidityETH(minter, 10000_0000, 1_0000);
 
   await setMaxAmount(1000);
 }
+
+describe("oracle & 卖出", function () {
+  before(async () => {
+    await initialFixture();
+    await labubuTransfer(minter, w[0], 10000);
+  })
+  it("设置开盘价", async function () {
+    await setOpenPrice()
+    expect(await getLabubuPrice()).to.eq(0.1)
+    let p = await getOpenPrice();
+    expect(p[1]).to.eq(0.1)
+    expect(p[2]).to.eq(true)
+  })
+  it("匹配decline", async function () {
+    await setOpenPriceByAdmin(
+      new BigNumber(0.1).multipliedBy(0.99).multipliedBy(1e12).toFixed()
+    );
+    expect(await getDecline()).to.eq(0)
+    // 跌9个点（0.09090909）9.09%
+    await setOpenPriceByAdmin(
+      new BigNumber(0.1).multipliedBy(1.1).multipliedBy(1e12).toFixed()
+    );
+    expect(await getDecline()).to.eq(900)
+  })
+  it("跌几个点，手续费x2。", async function () {
+    // 18%
+    await expect(sell(w[0], 1000)).to.changeTokenBalances(
+      labubu,
+      [labubu, sellFeeAddress, w[0]],
+      [
+        0,
+        parseEther('180'),
+        parseEther('1000').mul(-1),
+      ]
+    )
+  })
+  it("最低5%", async function () {
+    await setOpenPriceByAdmin(
+      new BigNumber(0.1).multipliedBy(0.99).multipliedBy(1e12).toFixed()
+    );
+    // 5%
+    await expect(sell(w[0], 1000)).to.changeTokenBalances(
+      labubu,
+      [labubu, sellFeeAddress, w[0]],
+      [
+        0,
+        parseEther('50'),
+        parseEther('1000').mul(-1),
+      ]
+    )
+  })
+})
 
 describe("赎回Lp", function () {
   before(async () => {
@@ -110,11 +164,6 @@ describe("赎回Lp", function () {
       ]
     )
   })
-})
-
-describe("卖出", function () {
-  it("跌几个点，手续费x2。")
-  it("最低5%")
 })
 
 describe("入金", function () {

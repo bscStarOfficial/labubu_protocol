@@ -81,7 +81,7 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
     ['SKY_LABUBU', labubu.address],
     ['TaxExempt', labubu.address],
     ['TaxExempt', deployer],
-    ['TaxExempt', await labubu.SWAP_MIDDLEWARE()],
+    // ['TaxExempt', await labubu.SWAP_MIDDLEWARE()], // 不能白名单，不然无法识别卖出
     ['TaxExempt', marketAddress],
     ['TaxExempt', minter],
     ['TaxExempt', sellFeeAddress],

@@ -122,7 +122,7 @@ module.exports = {
   removeLiquidityETH,
   removeLiquidity,
   buy: swapExactETHForTokensSupportingFeeOnTransferTokens,
-  sell: swapExactTokensForETHSupportingFeeOnTransferTokens,
+  // sell: swapExactTokensForETHSupportingFeeOnTransferTokens,
   getLabubuAmountByLp,
   lpApprove,
   lpBalance
