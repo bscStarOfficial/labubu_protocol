@@ -36,6 +36,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     mapping(address => uint256) public accountSales;
     mapping(address => uint256) public directTeamSales;
     mapping(address => uint256) public addLiquidityUnlockTime;
+    mapping(address => uint256) public accountLpAmount;
 
     bool public burnAndMintSwitch = false;
     uint256[] public burnRate;
@@ -99,10 +100,10 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     }
 
     receive() external payable {
-       deposit();
+        deposit();
     }
 
-    function deposit() public payable {
+    function deposit() public payable returns (uint256) {
         uint256 value = msg.value;
 
         // 早期入金限制
@@ -110,7 +111,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
         if (value == 0.6 ether) {
             nft.safeMint{value: value}(msg.sender);
-            return;
+            return 0;
         }
 
         // 1e17 原版限制isContract(msg.sender)
@@ -138,7 +139,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         tokenAmt = ethToTokenSwap(address(this), _value, address(this));
         IWETH(bnbTokenAddress).deposit{value: _value}();
 
-        addLiquidityEth(_value, tokenAmt, msg.sender);
+        return addLiquidityEth(_value, tokenAmt, msg.sender);
     }
 
     function _update(address from, address to, uint256 amount) internal override {
@@ -158,8 +159,13 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         require(tType != TransferType.AddLiquidity, "!add");
 
         if (tType == TransferType.RemoveLiquidity) {
+            // 计算lp数量
+            uint lpAmount = calLiquidityByLububu(amount);
+            require(accountLpAmount[from] >= lpAmount, "!added lp amount");
+            accountLpAmount[from] -= lpAmount;
+
+            // 记录添加的lpAmount
             uint256 _addLiquidityUnlockTime = addLiquidityUnlockTime[to];
-            require(_addLiquidityUnlockTime > 0, "There is no way to withdraw if you have not added a pool");
 
             uint256 _amount;
             if (block.timestamp < _addLiquidityUnlockTime + 30 days) {
@@ -238,12 +244,11 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         return balanceAfter;
     }
 
-
     function addLiquidityEth(uint256 tokenAmtA, uint256 tokenAmtB, address recipient) internal returns (uint256) {
         require(tokenAmtA > 0, "Insufficient tokenA balance");
         require(tokenAmtB > 0, "Insufficient tokenB balance");
 
-        IPancakeRouter02(pancakeV2Router).addLiquidity(
+        (,,uint liquidity) = IPancakeRouter02(pancakeV2Router).addLiquidity(
             address(bnbTokenAddress),
             address(this),
             tokenAmtA,
@@ -253,11 +258,16 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             recipient,
             block.timestamp + 600
         );
+        accountLpAmount[recipient] += liquidity;
 
-        IPancakePair pair = IPancakePair(pancakePair);
-        return pair.balanceOf(recipient);
+        return liquidity;
     }
 
+    function calLiquidityByLububu(uint256 lububuAmount) public view returns (uint) {
+        uint totalLp = IPancakePair(pancakePair).totalSupply();
+        (,uint rThis,) = IPancakePair(pancakePair).getReserves();
+        return lububuAmount * totalLp / rThis;
+    }
 
     function tokenToEthSwap(uint256 amountIn, address recipient) internal {
         require(amountIn > 0, "Invalid input amount");
@@ -266,8 +276,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         path[0] = address(this);
         path[1] = bnbTokenAddress;
 
-        // uint256 before = address(this).balance;
-
         IPancakeRouter02(pancakeV2Router).swapExactTokensForETHSupportingFeeOnTransferTokens(
             amountIn,
             0,
@@ -275,9 +283,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             recipient,
             block.timestamp + 600
         );
-
-        // uint256 received = address(this).balance - before;
-        // return received;
     }
 
     // 卖出税
@@ -314,7 +319,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         return lpValueInBNB >= MIN_AMOUNT.div(2);
     }
 
-
     function isChildListLpValueAboveThreshold(address account, uint256 num) internal view returns (bool) {
         uint256 validNum;
         // TODO referrals 太多如何？
@@ -332,7 +336,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
         return validNum >= num;
     }
-
 
     event DistributeReferralReward(address indexed from, address indexed to, uint8 indexed level, uint256 amount);
 
