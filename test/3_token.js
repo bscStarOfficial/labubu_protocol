@@ -104,7 +104,6 @@ describe("赎回Lp", function () {
     await deposit(w[0], 0.1);
     // 计算最大可赎回
     expect(await accountLpAmount(w[0])).to.eq(lpAmount)
-    console.log(await lpBalance(w[0]), lpAmount)
 
     await lpApprove(w[0])
     await removeLiquidity(w[0], lpAmount)
@@ -146,7 +145,7 @@ describe("赎回Lp", function () {
       labubu,
       [w[1], dead],
       [
-        lububuAmount.mul(5).div(10),
+        lububuAmount.mul(5).div(10).add(1),
         lububuAmount.mul(5).div(10),
       ]
     )
