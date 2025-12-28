@@ -42,7 +42,7 @@ contract LabubuOracle is Initializable, UUPSUpgradeable {
         return rate - rate % 1e4;
     }
 
-    // @notice star price 价格精度6
+    // @notice star price 价格精度12
     function getLabubuPrice() public view returns (uint price) {
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
         if (pair.token0() == labubu) {
@@ -52,12 +52,12 @@ contract LabubuOracle is Initializable, UUPSUpgradeable {
         }
     }
 
-    // @notice bnb price 价格精度6
+    // @notice bnb price 价格精度12
     function getBnbPrice() public view returns (uint price) {
-        if (block.chainid != 56) price = 500e6;
+        if (block.chainid != 56) price = 1000e12;
         else {
             (uint112 reserve0, uint112 reserve1,) = IPancakePair(0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE).getReserves();
-            price = reserve0 * 1e6 / reserve1;
+            price = reserve0 * 1e12 / reserve1;
         }
     }
 
