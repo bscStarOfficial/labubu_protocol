@@ -5,8 +5,8 @@ const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-networ
 const {nftInit} = require("./util/nft");
 const {parseEther, formatEther} = require("ethers/lib/utils");
 const {grantRole, dead} = require("./util/common");
-const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell} = require("./util/labubu");
-const {addLiquidityETH, dexInit, buy, getLabubuAmountByLp, removeLiquidityETH, lpApprove, removeLiquidity, lpBalance} = require("./util/dex");
+const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell, triggerDailyBurnAndMint, setBurnAndMintSwitch} = require("./util/labubu");
+const {addLiquidityETH, dexInit, buy, getLabubuAmountByLp, removeLiquidityETH, lpApprove, removeLiquidity, lpBalance, getPair} = require("./util/dex");
 const {setReferrer, register18} = require("./util/registerV2");
 const {setOpenPrice, getLabubuPrice, getOpenPrice, setOpenPriceByAdmin, getDecline} = require("./util/oracle");
 const BigNumber = require("bignumber.js");
@@ -16,6 +16,7 @@ let labubu, nft, manager, oracle, registerV2, router;
 
 let w = [];
 
+// TODO event？
 async function initialFixture() {
   await deployments.fixture();
   await nftInit();
@@ -262,8 +263,29 @@ describe("通缩", function () {
   before(async () => {
     await initialFixture();
   })
+  it("burnAndMintSwitch不开启不通缩", async function () {
+    await time.increase(86400);
+    await expect(triggerDailyBurnAndMint()).to.changeTokenBalances(
+      labubu,
+      [dead, deflationAddress],
+      [0, 0]
+    )
+  })
+  it("一次最多通缩2%")
   it("每天1%分币")
-  it("每天1%销毁")
+  it("每天1%销毁", async function () {
+    await setBurnAndMintSwitch(true);
+    await time.increase(86400 * 4);
+    await expect(triggerDailyBurnAndMint()).to.changeTokenBalances(
+      labubu,
+      [dead, deflationAddress, await getPair()],
+      [
+        parseEther('1000000'),
+        parseEther('1000000'),
+        parseEther('2000000').mul(-1)
+      ]
+    )
+  })
 })
 
 describe("白名单", function () {

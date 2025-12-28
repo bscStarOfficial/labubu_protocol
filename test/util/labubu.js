@@ -85,6 +85,14 @@ function sell(account, amount) {
   )
 }
 
+function triggerDailyBurnAndMint() {
+  return labubu.triggerDailyBurnAndMint();
+}
+
+function setBurnAndMintSwitch(b) {
+  return labubu.setBurnAndMintSwitch(b);
+}
+
 module.exports = {
   labubuInit,
   labubuTransfer,
@@ -99,5 +107,7 @@ module.exports = {
   setMaxAmount,
   mockDeposit,
   accountLpAmount,
-  sell
+  sell,
+  triggerDailyBurnAndMint,
+  setBurnAndMintSwitch
 }

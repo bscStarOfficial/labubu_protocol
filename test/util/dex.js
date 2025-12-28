@@ -12,6 +12,11 @@ async function dexInit() {
   pair = await ethers.getContractAt("UniswapV2Pair", pairAddress);
 }
 
+async function getPair() {
+  let pairAddress = await labubu.pancakePair();
+  return await ethers.getContractAt("UniswapV2Pair", pairAddress);
+}
+
 async function lpApprove(account, amount = 10000000) {
   await pair.connect(account).approve(
     router.address,
@@ -125,5 +130,6 @@ module.exports = {
   // sell: swapExactTokensForETHSupportingFeeOnTransferTokens,
   getLabubuAmountByLp,
   lpApprove,
-  lpBalance
+  lpBalance,
+  getPair
 }
