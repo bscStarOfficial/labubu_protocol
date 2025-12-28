@@ -181,7 +181,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             amount = amount.sub(_amount);
             super._update(from, to, amount);
         } else if (tType == TransferType.Sell) {
-            super._update(from, address(this), amount);
             swapSellAward(from, amount);
         } else {
             super._update(from, to, amount);
@@ -293,10 +292,12 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         if (rate >= 10000) rate = 10000;
         // 手续费
         uint256 sellFeeAmount = amount.mul(rate).div(BASE_PERCENT);
-        tokenToEthSwap(sellFeeAmount, sellFeeAddress);
+        // tokenToEthSwap(sellFeeAmount, sellFeeAddress);
+        super._update(from, sellFeeAddress, sellFeeAmount);
         // 卖出
         uint256 leftAmount = amount.sub(sellFeeAmount);
         if (leftAmount > 0) {
+            super._update(from, address(this), leftAmount);
             tokenToEthSwap(leftAmount, from);
         }
     }
