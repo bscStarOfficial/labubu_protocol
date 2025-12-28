@@ -61,12 +61,14 @@ contract LabubuOracle is Initializable, UUPSUpgradeable {
         }
     }
 
-    function setOpenPrice() public {
+    function setOpenPrice() public returns (uint, uint) {
         uint currentDay = block.timestamp / 86400;
         uint currentPrice = getLabubuPrice();
         // 设置开盘价
         if (labubuOpenPrice[currentDay] == 0)
             labubuOpenPrice[currentDay] = currentPrice;
+
+        return (currentDay, labubuOpenPrice[currentDay]);
     }
 
     function setOpenPriceByAdmin(uint price) external {
