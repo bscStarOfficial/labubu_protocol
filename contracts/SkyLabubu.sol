@@ -452,12 +452,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         maxAmount = amount;
     }
 
-    function setTriggerInterval(uint256 _tigger) external {
-        manager.allowFoundation(msg.sender);
-
-        TRIGGER_INTERVAL = _tigger;
-    }
-
     function setOracle(ILabubuOracle _oracle) external {
         manager.allowFoundation(msg.sender);
 
