@@ -290,7 +290,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         );
     }
 
-    // 卖出税
     function swapSellAward(address from, uint256 amount) internal {
         // 跌几个点，手续费x2。最低5%
         uint rate = oracle.getDecline() * 2;
@@ -343,7 +342,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
         return validNum >= num;
     }
-
 
     function _distributeReferralReward(address user, uint256 _totalAmount, uint256 totalReward) internal {
         uint256 distributedReward = 0;
