@@ -43,10 +43,10 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     bool public burnAndMintSwitch;
     uint256 public lastTriggerTime;
 
-    event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
-    event DistributeReferralReward(address indexed from, address indexed to, uint8 indexed level, uint256 amount);
-    event TriggerDailyBurnAndMint(uint256 indexed liquidityPairBalance, uint256 indexed burnAmount, uint256 indexed holdLPAwardAmount, uint256 rounds);
     event Deposit(address indexed from, uint usdtValue, uint bnbValue);
+    event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
+    event DistributeReferralReward(address indexed from, address indexed to, uint8 indexed level, uint usdtValue, uint bnbValue);
+    event TriggerDailyBurnAndMint(uint256 indexed liquidityPairBalance, uint256 indexed burnAmount, uint256 indexed holdLPAwardAmount, uint256 rounds);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address _wBNB, address _router) {
@@ -148,7 +148,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
         uint liquidity = addLiquidityEth(_value, tokenAmt, msg.sender);
 
-        emit Deposit(msg.sender, value * oracle.getBnbPrice() / 1e12, value);
+        emit Deposit(msg.sender, getUsdtValue(value), value);
         return liquidity;
     }
 
@@ -231,6 +231,10 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
     function isBlacklisted(address account) public view returns (bool) {
         return manager.hasRole(keccak256("Blacklist"), account);
+    }
+
+    function getUsdtValue(uint bnbAmount) internal view returns (uint) {
+        return oracle.getBnbPrice() * bnbAmount / 1e12;
     }
 
     function ethToTokenSwap(address toToken, uint256 amount, address recipient) internal returns (uint256) {
@@ -374,7 +378,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
             if (eligible) {
                 safeTransferETH(referrer, reward);
-                emit DistributeReferralReward(user, referrer, i + 1, reward);
+                emit DistributeReferralReward(user, referrer, i + 1, getUsdtValue(reward), reward);
                 distributedReward += reward;
             }
         }
