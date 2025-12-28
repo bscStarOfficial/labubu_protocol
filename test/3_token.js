@@ -3,10 +3,10 @@ const {ethers, deployments} = require("hardhat");
 const common = require("./util/common");
 const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-network-helpers");
 const {nftInit} = require("./util/nft");
-const {parseEther} = require("ethers/lib/utils");
-const {grantRole} = require("./util/common");
-const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove} = require("./util/labubu");
-const {addLiquidityETH, dexInit, buy} = require("./util/dex");
+const {parseEther, formatEther} = require("ethers/lib/utils");
+const {grantRole, dead} = require("./util/common");
+const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount} = require("./util/labubu");
+const {addLiquidityETH, dexInit, buy, getLabubuAmountByLp, removeLiquidityETH, lpApprove, removeLiquidity, lpBalance} = require("./util/dex");
 const {setReferrer, register18} = require("./util/registerV2");
 
 let deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress;
@@ -36,10 +36,86 @@ async function initialFixture() {
 
   await common.multiApprove(labubu, [router]);
   await setBalance(minter.address, parseEther('100000'))
-  await addLiquidityETH(minter, 1000_0000, 1_0000);
+  await addLiquidityETH(minter, 1_0000, 1_0000);
 
   await setMaxAmount(1000);
 }
+
+describe("赎回Lp", function () {
+  before(async () => {
+    await initialFixture();
+  })
+  it('赎回数量不能多于添加数量', async () => {
+    let lpAmount = await mockDeposit(w[0], 0.1);
+    await deposit(w[0], 0.1);
+    // 计算最大可赎回
+    expect(await accountLpAmount(w[0])).to.eq(lpAmount)
+    console.log(await lpBalance(w[0]), lpAmount)
+
+    await lpApprove(w[0])
+    await removeLiquidity(w[0], lpAmount)
+    expect(await accountLpAmount(w[0])).to.closeTo(0, 0.00001)
+  })
+  it('30天内90%币销毁', async function () {
+    // lpAmount = await mockDeposit(w[1], 0.1);
+    await deposit(w[1], 0.1);
+    await lpApprove(w[1])
+    let lpAmount = 0.001;
+    let lububuAmount = await getLabubuAmountByLp(lpAmount);
+    await expect(removeLiquidity(w[1], lpAmount)).to.changeTokenBalances(
+      labubu,
+      [w[1], dead],
+      [
+        lububuAmount.mul(1).div(10).add(1),
+        lububuAmount.mul(9).div(10),
+      ]
+    )
+  })
+  it('60天内70%币销毁', async function () {
+    await time.increase(86400 * 30);
+    let lpAmount = 0.001;
+    let lububuAmount = await getLabubuAmountByLp(lpAmount);
+    await expect(removeLiquidity(w[1], lpAmount)).to.changeTokenBalances(
+      labubu,
+      [w[1], dead],
+      [
+        lububuAmount.mul(3).div(10).add(1),
+        lububuAmount.mul(7).div(10),
+      ]
+    )
+  })
+  it('90天内50%币销毁', async function () {
+    await time.increase(86400 * 30);
+    let lpAmount = 0.001;
+    let lububuAmount = await getLabubuAmountByLp(lpAmount);
+    await expect(removeLiquidity(w[1], lpAmount)).to.changeTokenBalances(
+      labubu,
+      [w[1], dead],
+      [
+        lububuAmount.mul(5).div(10),
+        lububuAmount.mul(5).div(10),
+      ]
+    )
+  })
+  it('90天后30%币销毁', async function () {
+    await time.increase(86400 * 30);
+    let lpAmount = 0.001;
+    let lububuAmount = await getLabubuAmountByLp(lpAmount);
+    await expect(removeLiquidity(w[1], lpAmount)).to.changeTokenBalances(
+      labubu,
+      [w[1], dead],
+      [
+        lububuAmount.mul(7).div(10).add(1),
+        lububuAmount.mul(3).div(10),
+      ]
+    )
+  })
+})
+
+describe("卖出", function () {
+  it("跌几个点，手续费x2。")
+  it("最低5%")
+})
 
 describe("入金", function () {
   before(async () => {
@@ -49,6 +125,7 @@ describe("入金", function () {
     it('最低入金0.1BNB', async function () {
       await expect(deposit(w[0], 0.099)).to.revertedWith('!value')
     })
+    // bsc测试
     it('60%用于组建流动性池(LP)', async function () {
 
     })
@@ -63,6 +140,11 @@ describe("入金", function () {
   describe("20%用于布道奖励（10层）", function () {
     before(async () => {
       await initialFixture()
+    })
+    it('布道奖励发不完，资金回到marketAddress', async function () {
+      await expect(deposit(w[10], 0.1)).changeEtherBalance(
+        marketAddress, parseEther("0.02")
+      )
     })
     it("自身绩效不达标无法获取奖励", async function () {
       // 充值
@@ -116,9 +198,6 @@ describe("入金", function () {
         ]
       )
     })
-    it('布道奖励发不完，资金回到marketAddress', async function () {
-
-    })
   })
   describe("无法通过pancake入金", function () {
     it("无法买入", async function () {
@@ -128,24 +207,6 @@ describe("入金", function () {
       await labubuApprove(w[0], router, 10000000000)
       await expect(addLiquidityETH(w[0], 1, 1)).to.revertedWith("!add")
     })
-  })
-})
-
-describe("出金", function () {
-  before(async () => {
-    await initialFixture();
-  })
-
-  describe("赎回Lp", function () {
-    it('30天内90%币销毁')
-    it('60天内70%币销毁')
-    it('90天内50%币销毁')
-    it('90天后30%币销毁')
-  })
-
-  describe("卖出", function () {
-    it("跌几个点，手续费x2。")
-    it("最低5%")
   })
 })
 

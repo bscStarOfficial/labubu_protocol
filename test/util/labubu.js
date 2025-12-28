@@ -3,12 +3,13 @@ const {ethers} = require("hardhat");
 const common = require("./common");
 const {Wallet} = require("ethers");
 const {setBalance} = require("@nomicfoundation/hardhat-network-helpers");
-const {grantRole} = require("./common");
+const {grantRole, to, toFNumber} = require("./common");
 
-let labubu;
+let labubu, pair;
 
 async function labubuInit() {
   [labubu] = await common.getContractByNames(["SkyLabubu"]);
+  pair = await labubu.pancakePair();
 }
 
 function labubuTransfer(account, to, amount) {
@@ -59,10 +60,22 @@ async function setMaxAmount(amount) {
   await labubu.setMaxAmount(parseEther(amount.toString()));
 }
 
+async function accountLpAmount(account) {
+  let lpAmount = await labubu.accountLpAmount(account.address);
+  return toFNumber(lpAmount);
+}
+
 function deposit(account, bnbAmount) {
   return labubu.connect(account).deposit({
     value: parseEther(bnbAmount.toString()),
   })
+}
+
+async function mockDeposit(account, bnbAmount) {
+  let lpAmount = await labubu.connect(account).callStatic.deposit({
+    value: parseEther(bnbAmount.toString()),
+  })
+  return toFNumber(lpAmount)
 }
 
 module.exports = {
@@ -76,5 +89,7 @@ module.exports = {
   totalSupply,
   deposit,
   inviteReferral,
-  setMaxAmount
+  setMaxAmount,
+  mockDeposit,
+  accountLpAmount
 }

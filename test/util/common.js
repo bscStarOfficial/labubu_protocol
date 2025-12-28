@@ -2,6 +2,7 @@ const {ethers, deployments, getNamedAccounts, getUnnamedAccounts} = require("har
 const {formatEther, parseEther, keccak256, toUtf8Bytes} = require("ethers/lib/utils")
 const {setBalance} = require("@nomicfoundation/hardhat-network-helpers");
 const {Wallet} = require("ethers");
+const BigNumber = require("bignumber.js");
 
 async function getAccounts(names = []) {
   let accounts = [];
@@ -79,8 +80,11 @@ async function multiRegister() {
   await registerV2.setReferrer(J, I.address);
 }
 
-function toFNumber(number) {
-  return Number(formatEther(number));
+function toFNumber(number, decimals = 6) {
+  let res = new BigNumber(number.toString())
+    .dividedBy(1e18)
+    .toFixed(decimals, 1);
+  return Number(res);
 }
 
 async function grantRole(role, account) {
@@ -92,7 +96,12 @@ async function grantRole(role, account) {
 }
 
 module.exports = {
-  dead: {address: '0x000000000000000000000000000000000000dEaD'},
+  dead: {
+    address: '0x000000000000000000000000000000000000dEaD',
+    getAddress() {
+      return '0x000000000000000000000000000000000000dEaD'
+    }
+  },
   getAccounts, getContractByNames, multiApprove, getWallet,
   multiRegister, multiTransfer,
   tokenBalance,
