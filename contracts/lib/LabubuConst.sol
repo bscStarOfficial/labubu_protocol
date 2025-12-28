@@ -10,7 +10,8 @@ contract LabubuConst {
     uint256 public constant MIN_AMOUNT = 0.1 ether; // 最低入金
 
     address public constant BLACK_ADDRESS = address(0xdEaD);
-    address public constant SWAP_MIDDLEWARE = address(0x1);
+    address public constant SELL_MIDDLEWARE = address(0x1);// 有手续费
+    address public constant BUY_MIDDLEWARE = address(0x2); // 买入不能转入address(this), 无手续费
     address public immutable bnbTokenAddress;
     address public immutable pancakeV2Router;
 }

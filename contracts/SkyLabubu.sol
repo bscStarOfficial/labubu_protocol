@@ -201,7 +201,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     }
 
     function getTransferType(address from, address to) public view returns (TransferType) {
-        if (to == SWAP_MIDDLEWARE) {
+        if (to == SELL_MIDDLEWARE) {
             return TransferType.Sell;
         } else if (to == pancakePair) {
             return TransferType.AddLiquidity;
@@ -230,18 +230,17 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         path[0] = bnbTokenAddress;
         path[1] = toToken;
 
-        uint256 balanceBefore = IERC20(toToken).balanceOf(address(this));
         IPancakeRouter02(pancakeV2Router).swapExactETHForTokensSupportingFeeOnTransferTokens{value: amount}(
             0,
             path,
-            address(this),
-            block.timestamp + 600
+            BUY_MIDDLEWARE,
+            block.timestamp
         );
-        uint256 balanceAfter = IERC20(toToken).balanceOf(address(this));
+        uint256 balance = IERC20(toToken).balanceOf(BUY_MIDDLEWARE);
 
-        super._update(address(this), recipient, balanceAfter - balanceBefore);
+        super._update(BUY_MIDDLEWARE, recipient, balance);
 
-        return balanceAfter;
+        return balance;
     }
 
     function addLiquidityEth(uint256 tokenAmtA, uint256 tokenAmtB, address recipient) internal returns (uint256) {
