@@ -1,32 +1,29 @@
-const {parseEther, formatEther, parseUnits} = require("ethers/lib/utils");
-const common = require("./common");
-const BigNumber = require("bignumber.js");
-
-let oracle;
-async function oracleInit() {
-  [oracle] = await common.getContractByNames(["SkyLabubu"]);
-}
+const {ethers} = require("hardhat");
+const {Wallet} = require("ethers");
+const {setBalance} = require("@nomicfoundation/hardhat-network-helpers");
+const {parseEther} = require("ethers/lib/utils");
 
 async function getDecline() {
-  let res = await oracle.getDecline()
-  return new BigNumber(res.toString()).dividedBy(1e4).toNumber();
+  let oracle = await ethers.getContract("LabubuOracle");
+  return await oracle.getDecline();
 }
 
 async function getLabubuPrice() {
-  let price = await oracle.getLabubuPrice()
-  return new BigNumber(price.toString()).dividedBy(1e6).toNumber();
+  let oracle = await ethers.getContract("LabubuOracle");
+  return await oracle.getLabubuPrice();
 }
 
 async function setOpenPrice() {
-  return await oracle.setOpenPrice()
+  let oracle = await ethers.getContract("LabubuOracle");
+  return await oracle.setOpenPrice();
 }
 
 async function setOpenPriceByAdmin(price) {
-  return await oracle.setOpenPriceByAdmin(price)
+  let oracle = await ethers.getContract("LabubuOracle");
+  return await oracle.setOpenPriceByAdmin(price);
 }
 
 module.exports = {
-  oracleInit,
   getDecline,
   getLabubuPrice,
   setOpenPrice,
