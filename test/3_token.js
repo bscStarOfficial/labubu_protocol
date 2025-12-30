@@ -16,7 +16,6 @@ let labubu, nft, manager, oracle, registerV2, router;
 
 let w = [];
 
-// TODO event？
 async function initialFixture() {
   await deployments.fixture();
   await nftInit();
