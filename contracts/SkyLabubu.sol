@@ -310,42 +310,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         }
     }
 
-    function isLpValueAboveThreshold(address user) internal view returns (bool) {
-        IPancakePair pair = IPancakePair(pancakePair);
-
-        (uint112 reserveBnb, ,) = pair.getReserves();
-        uint256 totalSupply = pair.totalSupply();
-
-        if (totalSupply == 0) return false; // 防止除0异常
-
-        uint256 userLP = pair.balanceOf(user);
-        uint256 userShare = userLP.mul(1e18).div(totalSupply);
-
-        uint256 bnbAmount = uint(reserveBnb).mul(userShare).div(1e18);
-
-        uint256 lpValueInBNB = bnbAmount.mul(2);
-
-        return lpValueInBNB >= MIN_AMOUNT.div(2);
-    }
-
-    function isChildListLpValueAboveThreshold(address account, uint256 num) internal view returns (bool) {
-        uint256 validNum;
-        // TODO referrals 太多如何？
-        address[] memory referrals = registerV2.getReferrals(account);
-        for (uint8 i = 0; i < referrals.length; i++) {
-            address c = referrals[i];
-            bool valid = isLpValueAboveThreshold(c);
-            if (valid) {
-                validNum = validNum.add(1);
-            }
-            if (validNum >= num) {
-                break;
-            }
-        }
-
-        return validNum >= num;
-    }
-
     function _distributeBNB(address user, uint256 _totalAmount) internal {
         require(
             address(nft) != address(0) &&
