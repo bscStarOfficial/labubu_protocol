@@ -49,7 +49,7 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         uint perDebt;
     }
 
-    event DistributeReferralReward(address indexed from, address indexed to, uint8 indexed level, uint usdtValue, uint bnbValue);
+    event DistributeReferralReward(address indexed from, address indexed to, uint8 indexed level, uint tp, uint tokenAmount, uint usdtValue);
     event PayeeSet(address account, uint share);
     event DepositReward(uint amount);
     event SendReward(uint amount, address token);
@@ -125,8 +125,8 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
 
             if (eligible) {
                 // 回本
-                (uint bnbAmount,uint bnbToU) = transferBnbCheckQuota(referrer, reward);
-                emit DistributeReferralReward(account, referrer, i + 1, bnbToU, bnbAmount);
+                (uint bnbAmount, uint bnbToU) = transferBnbCheckQuota(referrer, reward);
+                emit DistributeReferralReward(account, referrer, i + 1, 0, bnbAmount, bnbToU);
                 distributedReward += bnbAmount;
             }
 
@@ -218,6 +218,8 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         payee.available = 0;
         payee.claimed += reward;
 
+        // TODO 20% 动态
+
         transferLabubuCheckQuota(account, reward);
     }
 
@@ -236,10 +238,10 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         }
     }
 
-    function transferLabubuCheckQuota(address account, uint labubuAmount) internal {
+    function transferLabubuCheckQuota(address account, uint labubuAmount) internal returns (uint, uint) {
         // 额度检测
         uint leftQuota = getLeftQuota(account);
-        if (leftQuota == 0) return;
+        if (leftQuota == 0) return (0, 0);
 
         uint price = oracle.getLabubuPrice();
         uint labubuToU = price * labubuAmount / 1e12;
@@ -254,6 +256,8 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
             IERC20(labubu).transfer(account, labubuAmount);
             emit Claimed(account, labubuAmount, labubuToU);
         }
+
+        return (labubuAmount, labubuToU);
     }
 
     function transferBnbCheckQuota(address account, uint bnbAmount) internal returns (uint, uint){

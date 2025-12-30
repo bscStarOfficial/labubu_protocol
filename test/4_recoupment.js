@@ -99,3 +99,12 @@ describe("通缩分红", function () {
     expect(await availableReward(B)).to.eq(0)
   })
 })
+
+describe("提取收益", function () {
+  before(async () => {
+    await initialFixture();
+  })
+  it("80%静态")
+  it("20%动态")
+  it("动态分红算在3倍收益内")
+})
