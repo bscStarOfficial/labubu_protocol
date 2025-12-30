@@ -90,19 +90,16 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         }
     }
 
-    function addRecoupmentDeposit(address account, uint amount) external {
+    function distributeReferralReward(address account) external payable {
         require(
             manager.hasRole(keccak256("SKY_LABUBU"), msg.sender),
             "!labubu"
         );
 
-        recoupments[account].deposit += amount;
-        recoupments[account].quota += amount * quotaTimes;
-    }
-
-    function distributeReferralReward(address account) external payable {
         uint value = msg.value;
-        require(value > 0, "!0");
+
+        recoupments[account].deposit += value * 5; // 20%
+        recoupments[account].quota += value * 5 * quotaTimes;
 
         uint distributedReward;
         (address[] memory _referrers, uint realCount) = registerV2.getReferrers(account, 10);
