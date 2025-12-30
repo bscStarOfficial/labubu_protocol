@@ -3,15 +3,16 @@ pragma solidity ^0.8.20;
 
 import "./interfaces/ILabubuNFT.sol";
 import "./interfaces/ILabubuOracle.sol";
+import "./interfaces/ILabubuRecoupment.sol";
 import "./interfaces/IManager.sol";
 import "./interfaces/IPancake.sol";
 import "./interfaces/IRegisterV2.sol";
 import "./interfaces/IWETH.sol";
 import "./lib/LabubuConst.sol";
 import "./lib/SafeMath.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "hardhat/console.sol";
 
@@ -19,14 +20,13 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     using SafeMath for uint256;
 
     uint256 public maxAmount;
-    uint16[] public invitationAwardRates;
 
     ILabubuNFT public nft;
+    ILabubuRecoupment public recoupment;
     ILabubuOracle public oracle;
     IManager public manager;
     IRegisterV2 public registerV2;
 
-    address public marketAddress; // 默认邀请人地址
     address public deflationAddress; // 每日1%销毁地址
     address public sellFeeAddress; // 卖出手续费地址
     address public depositFeeAddress; // 10%入金手续费
@@ -46,7 +46,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
     event Deposit(address indexed from, uint usdtValue, uint bnbValue);
     event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
-    event DistributeReferralReward(address indexed from, address indexed to, uint8 indexed level, uint usdtValue, uint bnbValue);
     event TriggerDailyBurnAndMint(uint256 indexed liquidityPairBalance, uint256 indexed burnAmount, uint256 indexed holdLPAwardAmount, uint256 rounds);
     event LpRedeemed(address indexed user, uint labubuPrice, uint backAmount, uint burnAmount);
 
@@ -59,7 +58,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     }
 
     function initialize(
-        address _marketAddress,
         address _minter,
         address _sellFeeAddress,
         address _deflationAddress,
@@ -74,7 +72,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         __UUPSUpgradeable_init();
         __ERC20_init("Sky Labubu", "SkyLabubu");
 
-        marketAddress = _marketAddress;
         nft = _nft;
 
         sellFeeAddress = _sellFeeAddress;
@@ -95,13 +92,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         removeLpBurnRate.push(5000);
         removeLpBurnRate.push(3000);
 
-        invitationAwardRates.push(500);
-        invitationAwardRates.push(400);
-        invitationAwardRates.push(300);
-        invitationAwardRates.push(200);
-        for (uint8 i = 4; i < 10; i++) {
-            invitationAwardRates.push(100);
-        }
         maxAmount = 0.1 ether;
 
         // 初始供应量
@@ -137,11 +127,10 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         directTeamSales[referrer] += value;
         addLiquidityUnlockTime[msg.sender] = block.timestamp;
 
-        uint256 marketIncentives = value.mul(MARKET_INCENTIVES).div(BASE_PERCENT);
-
         // 20%市场，10%NFT，10%项目方
-        _distributeReferralReward(msg.sender, value, marketIncentives);
+        _distributeBNB(msg.sender, value);
 
+        uint256 marketIncentives = value.mul(MARKET_INCENTIVES).div(BASE_PERCENT);
         uint256 _value = value.sub(marketIncentives).div(2);
 
         uint256 tokenAmt;
@@ -357,57 +346,23 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         return validNum >= num;
     }
 
-    function _distributeReferralReward(address user, uint256 _totalAmount, uint256 totalReward) internal {
-        uint256 distributedReward = 0;
+    function _distributeBNB(address user, uint256 _totalAmount) internal {
+        require(
+            address(nft) != address(0) &&
+            depositFeeAddress != address(0) &&
+            address(recoupment) != address(0), "!0"
+        );
+        // 推荐关系 20%
+        uint256 referralValue = _totalAmount.mul(2000).div(BASE_PERCENT);
+        recoupment.distributeReferralReward{value: referralValue}(user);
 
-        (address[] memory _referrers, uint realCount) = registerV2.getReferrers(user, 10);
-        for (uint8 i = 0; i < realCount; i++) {
-            address referrer = _referrers[i];
-            uint256 rate = invitationAwardRates[i]; // 对应层级的万分比
-            uint256 reward = _totalAmount.mul(rate).div(BASE_PERCENT);
-            if (reward == 0) {
-                continue;
-            }
+        // NFT 10%
+        uint256 nftValue = _totalAmount.mul(1000).div(BASE_PERCENT);
+        nft.sendReward{value: nftValue}();
 
-            bool eligible = false;
-            if (i == 0) {
-                eligible = isLpValueAboveThreshold(referrer);
-            } else if (i == 1) {
-                eligible = isLpValueAboveThreshold(referrer) && isChildListLpValueAboveThreshold(referrer, 3);
-            } else if (i == 2) {
-                eligible = isLpValueAboveThreshold(referrer) && isChildListLpValueAboveThreshold(referrer, 5);
-            } else if (i == 3) {
-                eligible = isLpValueAboveThreshold(referrer) && isChildListLpValueAboveThreshold(referrer, 7);
-            } else {
-                eligible = isLpValueAboveThreshold(referrer) && isChildListLpValueAboveThreshold(referrer, 10);
-            }
-
-            if (eligible) {
-                safeTransferETH(referrer, reward);
-                emit DistributeReferralReward(user, referrer, i + 1, getUsdtValue(reward), reward);
-                distributedReward += reward;
-            }
-        }
-
-        //NFT 10%
-        uint256 nftAmount = 0;
-        if (address(nft) != address(0)) {
-            nftAmount = _totalAmount.mul(1000).div(BASE_PERCENT);
-            nft.sendReward{value: nftAmount}();
-        }
-
-        //项目方 10%
-        uint256 depositFeeAmount = 0;
-        if (depositFeeAddress != address(0)) {
-            depositFeeAmount = _totalAmount.mul(1000).div(BASE_PERCENT);
-            safeTransferETH(depositFeeAddress, depositFeeAmount);
-        }
-
-        // 剩余部分
-        uint256 remaining = totalReward.sub(distributedReward).sub(nftAmount).sub(depositFeeAmount);
-        if (remaining > 0) {
-            safeTransferETH(marketAddress, remaining);
-        }
+        // 项目方 10%
+        uint256 depositFeeAmount = _totalAmount.mul(1000).div(BASE_PERCENT);
+        safeTransferETH(depositFeeAddress, depositFeeAmount);
     }
 
     function triggerDailyBurnAndMint() external {
@@ -475,6 +430,12 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         manager.allowFoundation(msg.sender);
 
         oracle = _oracle;
+    }
+
+    function setRecoupment(ILabubuRecoupment _recoupment) external {
+        manager.allowFoundation(msg.sender);
+
+        recoupment = _recoupment;
     }
 
     function withdrawEth(address recipient, uint256 value) external {
