@@ -221,6 +221,21 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         transferLabubuCheckQuota(account, reward);
     }
 
+    function _release(address account) internal virtual {
+        uint pending = pendingReward(account);
+        if (pending > 0) {
+            Payee storage payee = payees[account];
+
+            payee.debt = statistic.perDebt;
+            payee.available += pending;
+
+            uint leftQuota = getLeftQuota(account);
+            if (payee.available > leftQuota) payee.available = leftQuota;
+
+            emit Released(account, pending);
+        }
+    }
+
     function transferLabubuCheckQuota(address account, uint labubuAmount) internal {
         // 额度检测
         uint leftQuota = getLeftQuota(account);
@@ -259,18 +274,6 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
             safeTransferETH(account, bnbAmount);
         }
         return (bnbAmount, bnbToU);
-    }
-
-    function _release(address account) internal virtual {
-        uint pending = pendingReward(account);
-        if (pending > 0) {
-            Payee storage payee = payees[account];
-
-            payee.debt = statistic.perDebt;
-            payee.available += pending;
-
-            emit Released(account, pending);
-        }
     }
 
     function safeTransferETH(address to, uint value) internal {
