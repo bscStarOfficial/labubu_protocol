@@ -2,33 +2,43 @@
 // Compatible with OpenZeppelin Contracts ^5.5.0
 pragma solidity ^0.8.20;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {IManager} from "./interfaces/IManager.sol";
+import "./interfaces/ILabubuOracle.sol";
 import "hardhat/console.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IManager} from "./interfaces/IManager.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract LabubuLP is Initializable, UUPSUpgradeable {
     using SafeCast for uint;
 
     IManager public manager;
     address public labubu;
+    ILabubuOracle public oracle;
+
+    mapping(address => Recoupment) public recoupments;
+    uint public quotaTimes; // 额度倍数
 
     mapping(address => Payee) public payees;
     Statistic public statistic;
 
     struct Payee {
-        uint40 share;
-        uint128 debt;
-        uint released; // 这里的released 应该叫claimed更合适
+        uint share;
+        uint debt;
+        uint claimed;
         uint available;
     }
 
+    struct Recoupment {
+        uint deposit;
+        uint quota; // 收益额度
+        uint claimed;
+    }
 
     struct Statistic {
-        uint128 total;
-        uint128 perDebt;
+        uint total;
+        uint perDebt;
     }
 
     event PayeeSet(address account, uint share);
@@ -36,7 +46,7 @@ contract LabubuLP is Initializable, UUPSUpgradeable {
     event SendReward(uint amount, address token);
     event Released(address account, uint amount);
     // TODO usdAmount
-    event Claimed(address account, uint amount);
+    event Claimed(address account, uint labubuAmount, uint usdtAmount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -45,12 +55,28 @@ contract LabubuLP is Initializable, UUPSUpgradeable {
 
     function initialize(IManager _manager, address _labubu) public initializer {
         __UUPSUpgradeable_init();
-
         manager = _manager;
         labubu = _labubu;
+
+        quotaTimes = 3;
     }
 
-    function setPayee(address account, uint40 shares) external {
+    function addRecoupmentDeposit(address account, uint amount) external {
+        recoupments[account].deposit += amount;
+        recoupments[account].quota += amount * quotaTimes;
+    }
+
+    function addRecoupmentClaimed(address account, uint amount) external {
+        recoupments[account].claimed += amount;
+    }
+
+    function getLeftQuota(address account) public view returns (uint) {
+        Recoupment memory recoupment = recoupments[account];
+        return recoupment.quota > recoupment.claimed ?
+            recoupment.quota - recoupment.claimed : 0;
+    }
+
+    function setPayee(address account, uint shares) external {
         require(
             manager.hasRole(keccak256("SKY_LABUBU"), msg.sender),
             "!labubu"
@@ -60,11 +86,11 @@ contract LabubuLP is Initializable, UUPSUpgradeable {
 
         Payee storage payee = payees[account];
         if (shares > payee.share) {
-            uint40 plus = shares - payee.share;
+            uint plus = shares - payee.share;
             statistic.total += plus;
             payee.share += plus;
         } else {
-            uint40 sub = payee.share - shares;
+            uint sub = payee.share - shares;
             statistic.total -= sub;
             payee.share -= sub;
         }
@@ -95,7 +121,6 @@ contract LabubuLP is Initializable, UUPSUpgradeable {
     // @notice 提取收益
     function claim(address account) external {
         Payee storage payee = payees[account];
-
         uint reward = payee.available;
 
         uint pending = pendingReward(account);
@@ -103,15 +128,20 @@ contract LabubuLP is Initializable, UUPSUpgradeable {
             payee.debt = statistic.perDebt;
             reward += pending;
         }
+        if (reward == 0) return;
 
-        if (reward > 0) {
-            payee.available = 0;
-            payee.released += reward;
+        payee.available = 0;
+        payee.claimed += reward;
 
-            IERC20(labubu).transfer(account, reward);
+        // 额度检测
+        uint quota = getLeftQuota(account);
+        if (quota == 0) return;
 
-            emit Claimed(account, reward);
-        }
+        if (reward > getLeftQuota(account))
+            reward = getLeftQuota(account);
+
+        IERC20(labubu).transfer(account, reward);
+        emit Claimed(account, reward, getUsdtValue(reward));
     }
 
     function _release(address account) internal virtual {
@@ -134,6 +164,16 @@ contract LabubuLP is Initializable, UUPSUpgradeable {
 
     function availableReward(address account) public view returns (uint) {
         return payees[account].available + pendingReward(account);
+    }
+
+    function getUsdtValue(uint labubuAmount) internal view returns (uint) {
+        return oracle.getLabubuPrice() * labubuAmount / 1e12;
+    }
+
+    function setOracle(ILabubuOracle _oracle) external {
+        manager.allowFoundation(msg.sender);
+
+        oracle = _oracle;
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override {
