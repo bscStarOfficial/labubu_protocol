@@ -60,7 +60,6 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
         init: {
           methodName: 'initialize',
           args: [
-            marketAddress,
             minter,
             sellFeeAddress,
             deflationAddress,
@@ -119,11 +118,39 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
     },
     log: true,
   });
-
   let oracle = await ethers.getContract("LabubuOracle");
+
+  await deploy('LabubuRecoupment', {
+    from: deployer,
+    args: [],
+    proxy: {
+      proxyContract: 'OpenZeppelinTransparentProxy',
+      execute: {
+        init: {
+          methodName: 'initialize',
+          args: [
+            marketAddress,
+            manager.address,
+            registerV2.address,
+            oracle.address,
+            labubu.address
+          ]
+        }
+      }
+    },
+    log: true,
+  });
+  let recoupment = await ethers.getContract("LabubuRecoupment");
+
   if (await labubu.oracle() === AddressZero) {
     let tx = await labubu.setOracle(oracle.address);
     console.log("labubu.setOracle: ", oracle.address);
+    await tx.wait()
+  }
+
+  if (await labubu.recoupment() === AddressZero) {
+    let tx = await labubu.setRecoupment(recoupment.address);
+    console.log("labubu.setRecoupment: ", recoupment.address);
     await tx.wait()
   }
 
