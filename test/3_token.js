@@ -102,6 +102,7 @@ describe("赎回Lp", function () {
   })
   it("默认无法赎回LP", async function () {
     await deposit(w[1], 0.1);
+    await lpApprove(w[1])
     await expect(removeLiquidity(w[1], 0.001)).revertedWith("!Remove")
 
     await setRemoveLpSwitch(true);
@@ -152,7 +153,7 @@ describe("赎回Lp", function () {
       labubu,
       [w[1], dead],
       [
-        lububuAmount.mul(5).div(10).add(1),
+        lububuAmount.mul(5).div(10),
         lububuAmount.mul(5).div(10),
       ]
     )
