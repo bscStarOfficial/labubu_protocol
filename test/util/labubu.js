@@ -93,6 +93,10 @@ function setBurnAndMintSwitch(b) {
   return labubu.setBurnAndMintSwitch(b);
 }
 
+function setRemoveLpSwitch(b) {
+  return labubu.setRemoveLpSwitch(b);
+}
+
 module.exports = {
   labubuInit,
   labubuTransfer,
@@ -109,5 +113,6 @@ module.exports = {
   accountLpAmount,
   sell,
   triggerDailyBurnAndMint,
-  setBurnAndMintSwitch
+  setBurnAndMintSwitch,
+  setRemoveLpSwitch
 }

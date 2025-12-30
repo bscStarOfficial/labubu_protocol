@@ -5,7 +5,7 @@ const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-networ
 const {nftInit} = require("./util/nft");
 const {parseEther, formatEther} = require("ethers/lib/utils");
 const {grantRole, dead} = require("./util/common");
-const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell, triggerDailyBurnAndMint, setBurnAndMintSwitch} = require("./util/labubu");
+const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell, triggerDailyBurnAndMint, setBurnAndMintSwitch, setRemoveLpSwitch} = require("./util/labubu");
 const {addLiquidityETH, dexInit, buy, getLabubuAmountByLp, removeLiquidityETH, lpApprove, removeLiquidity, lpBalance, getPair} = require("./util/dex");
 const {setReferrer, register18} = require("./util/registerV2");
 const {setOpenPrice, getLabubuPrice, getOpenPrice, setOpenPriceByAdmin, getDecline} = require("./util/oracle");
@@ -99,6 +99,12 @@ describe("oracle & 卖出", function () {
 describe("赎回Lp", function () {
   before(async () => {
     await initialFixture();
+  })
+  it("默认无法赎回LP", async function () {
+    await deposit(w[1], 0.1);
+    await expect(removeLiquidity(w[1], 0.001)).revertedWith("!Remove")
+
+    await setRemoveLpSwitch(true);
   })
   it('赎回数量不能多于添加数量', async () => {
     let lpAmount = await mockDeposit(w[0], 0.1);
