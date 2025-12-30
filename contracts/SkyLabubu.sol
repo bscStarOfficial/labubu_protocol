@@ -436,6 +436,8 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
     function setDailBurnRate(uint16[3] calldata _burn) external {
         manager.allowFoundation(msg.sender);
+        require(_burn[0] + _burn[1] + _burn[2] == 50, "!50");
+
         dailyBurnRate = _burn;
     }
 
