@@ -34,7 +34,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     address public pancakePair;
 
     mapping(address => uint256) public accountSales;
-    mapping(address => uint256) public directTeamSales;
     mapping(address => uint256) public addLiquidityUnlockTime;
     mapping(address => uint256) public accountLpAmount;
 
@@ -123,8 +122,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         accountSales[msg.sender] += value;
         require(accountSales[msg.sender] <= maxAmount, "maxAmount");
 
-        address referrer = registerV2.referrers(msg.sender);
-        directTeamSales[referrer] += value;
         addLiquidityUnlockTime[msg.sender] = block.timestamp;
 
         // 20%市场，10%NFT，10%项目方
