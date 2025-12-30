@@ -41,6 +41,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     uint256[] public removeLpBurnRate;
 
     bool public burnAndMintSwitch;
+    bool public removeLpSwitch;
     uint256 public lastTriggerTime;
 
     event Deposit(address indexed from, uint usdtValue, uint bnbValue);
@@ -168,6 +169,8 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         TransferType tType = getTransferType(from, to);
         require(tType != TransferType.Buy, "!buy");
         require(tType != TransferType.AddLiquidity, "!add");
+        if (!removeLpSwitch)
+            require(tType != TransferType.RemoveLiquidity, "!Remove");
 
         if (tType == TransferType.RemoveLiquidity) {
             // 计算lp数量
@@ -445,6 +448,11 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         manager.allowFoundation(msg.sender);
         burnAndMintSwitch = _switch;
         lastTriggerTime = block.timestamp;
+    }
+
+    function setRemoveLpSwitch(bool _switch) external {
+        manager.allowFoundation(msg.sender);
+        removeLpSwitch = _switch;
     }
 
     function setMintNFTAddress(ILabubuNFT _nft) external {
