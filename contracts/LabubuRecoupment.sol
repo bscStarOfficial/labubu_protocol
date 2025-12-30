@@ -105,37 +105,43 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         (address[] memory _referrers, uint realCount) = registerV2.getReferrers(account, 10);
         for (uint8 i = 0; i < realCount; i++) {
             address referrer = _referrers[i];
-            uint256 rate = invitationAwardRates[i]; // 对应层级的万分比
-            uint256 reward = value * rate / BASE_PERCENT;
-            if (reward == 0) continue;
-            if (payees[referrer].share == 0) continue;
+            uint reward = getReferrerReward(referrer, i, value);
 
-            bool eligible = false;
-            if (i == 0) {
-                eligible = true;
-            } else if (i == 1) {
-                eligible = invitationNumAboveThreshold(referrer, 3);
-            } else if (i == 2) {
-                eligible = invitationNumAboveThreshold(referrer, 5);
-            } else if (i == 3) {
-                eligible = invitationNumAboveThreshold(referrer, 7);
-            } else {
-                eligible = invitationNumAboveThreshold(referrer, 10);
-            }
-
-            if (eligible) {
+            if (reward > 0) {
                 // 回本
                 (uint bnbAmount, uint bnbToU) = transferBnbCheckQuota(referrer, reward);
                 emit DistributeReferralReward(account, referrer, i + 1, 0, bnbAmount, bnbToU);
                 distributedReward += bnbAmount;
             }
-
-            // 剩余部分
-            uint256 remaining = msg.value - distributedReward;
-            if (remaining > 0) {
-                safeTransferETH(marketAddress, remaining);
-            }
         }
+
+        // 剩余部分
+        uint256 remaining = value - distributedReward;
+        if (remaining > 0) {
+            safeTransferETH(marketAddress, remaining);
+        }
+    }
+
+    function getReferrerReward(address referrer, uint i, uint amount) internal view returns (uint) {
+        uint256 rate = invitationAwardRates[i]; // 对应层级的万分比
+        uint256 reward = amount * rate / BASE_PERCENT;
+        if (reward == 0) return 0;
+        if (payees[referrer].share == 0) return 0;
+
+        bool eligible = false;
+        if (i == 0) {
+            eligible = true;
+        } else if (i == 1) {
+            eligible = invitationNumAboveThreshold(referrer, 3);
+        } else if (i == 2) {
+            eligible = invitationNumAboveThreshold(referrer, 5);
+        } else if (i == 3) {
+            eligible = invitationNumAboveThreshold(referrer, 7);
+        } else {
+            eligible = invitationNumAboveThreshold(referrer, 10);
+        }
+
+        return eligible ? reward : 0;
     }
 
     function getLeftQuota(address account) public view returns (uint) {
@@ -206,21 +212,40 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
     // @notice 提取收益
     function claim(address account) public {
         Payee storage payee = payees[account];
-        uint reward = payee.available;
+        uint totalReward = payee.available;
 
         uint pending = pendingReward(account);
         if (pending > 0) {
             payee.debt = statistic.perDebt;
-            reward += pending;
+            totalReward += pending;
         }
-        if (reward == 0) return;
+        if (totalReward == 0) return;
 
         payee.available = 0;
-        payee.claimed += reward;
+        payee.claimed += totalReward;
+
+        transferLabubuCheckQuota(account, totalReward * 8 / 10);
 
         // TODO 20% 动态
+        uint distributedReward;
+        uint marketReward = totalReward * 2 / 10;
+        (address[] memory _referrers, uint realCount) = registerV2.getReferrers(account, 10);
+        for (uint8 i = 0; i < realCount; i++) {
+            address referrer = _referrers[i];
+            uint rReward = getReferrerReward(referrer, i, marketReward);
 
-        transferLabubuCheckQuota(account, reward);
+            if (rReward > 0) {
+                (uint labubuAmount, uint labubuToU) = transferLabubuCheckQuota(referrer, rReward);
+                emit DistributeReferralReward(account, referrer, i + 1, 1, labubuAmount, labubuToU);
+                distributedReward += labubuAmount;
+            }
+        }
+
+        // 剩余部分
+        uint256 remaining = marketReward - distributedReward;
+        if (remaining > 0) {
+            IERC20(labubu).transfer(marketAddress, remaining);
+        }
     }
 
     function _release(address account) internal virtual {
