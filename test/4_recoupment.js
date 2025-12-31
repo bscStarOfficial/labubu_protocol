@@ -2,7 +2,7 @@ const {expect} = require("chai");
 const {ethers, deployments} = require("hardhat");
 const common = require("./util/common");
 const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-network-helpers");
-const {recoupmentInit, sendReward, pendingReward, claim, availableReward, setPayee, total, setQuota, recoupments, getLeftQuota, setAvailable} = require("./util/recoupment");
+const {recoupmentInit, sendReward, pendingReward, claim, availableReward, setPayee, total, setQuota, recoupments, getLeftQuota, setAvailable, sendTransaction} = require("./util/recoupment");
 const {parseEther, formatEther} = require("ethers/lib/utils");
 const {grantRole, dead} = require("./util/common");
 const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell, triggerDailyBurnAndMint, setBurnAndMintSwitch, setRemoveLpSwitch} = require("./util/labubu");
@@ -121,7 +121,7 @@ describe("3倍收益-Labubu动态", function () {
   })
   it("自身绩效不达标无法获取奖励", async function () {
     await setAvailable(w[10], 100)
-    await expect(claim(w[10])).changeTokenBalance(
+    await expect(sendTransaction(w[10])).changeTokenBalance(
       labubu, w[9], 0
     )
   })
