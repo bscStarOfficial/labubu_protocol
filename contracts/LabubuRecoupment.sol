@@ -256,10 +256,8 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
 
             payee.debt = statistic.perDebt;
             payee.available += pending;
-
-            uint leftQuota = getLeftQuota(account);
-            if (payee.available > leftQuota) payee.available = leftQuota;
-
+            // 不计算leftQuota了，如果计算leftQuota，注意available要转换成u
+            //
             emit Released(account, pending);
         }
     }
