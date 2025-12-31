@@ -98,8 +98,9 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
 
         uint value = msg.value;
 
-        recoupments[account].deposit += value * 5; // 20%
-        recoupments[account].quota += value * 5 * quotaTimes;
+        uint bnbPrice = oracle.getBnbPrice();
+        recoupments[account].deposit += value * 5 * bnbPrice / 1e12; // 20%
+        recoupments[account].quota += value * 5 * quotaTimes * bnbPrice / 1e12;
 
         uint distributedReward;
         (address[] memory _referrers, uint realCount) = registerV2.getReferrers(account, 10);
