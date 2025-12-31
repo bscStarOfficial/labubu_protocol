@@ -225,7 +225,7 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         payee.available = 0;
         payee.claimed += totalReward;
 
-        transferLabubuCheckQuota(account, totalReward * 8 / 10);
+        transferLabubuCheckQuota(account, totalReward, 8);
 
         // 20% 动态
         uint distributedReward;
@@ -236,7 +236,7 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
             uint rReward = getReferrerReward(referrer, i, marketReward);
 
             if (rReward > 0) {
-                (uint labubuAmount, uint labubuToU) = transferLabubuCheckQuota(referrer, rReward);
+                (uint labubuAmount, uint labubuToU) = transferLabubuCheckQuota(referrer, rReward, 10);
                 emit DistributeReferralReward(account, referrer, i + 1, 1, labubuAmount, labubuToU);
                 distributedReward += labubuAmount;
             }
@@ -264,7 +264,8 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         }
     }
 
-    function transferLabubuCheckQuota(address account, uint labubuAmount) internal returns (uint, uint) {
+    // @notice 静态收益transferPtg为8，20%要转换成动态收益。动态收益transferPtg为10。
+    function transferLabubuCheckQuota(address account, uint labubuAmount, uint transferPtg) internal returns (uint, uint) {
         // 额度检测
         uint leftQuota = getLeftQuota(account);
         if (leftQuota == 0) return (0, 0);
@@ -279,7 +280,7 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
 
         if (labubuAmount > 0) {
             recoupments[account].claimed += labubuToU;
-            IERC20(labubu).transfer(account, labubuAmount);
+            IERC20(labubu).transfer(account, labubuAmount * transferPtg / 10);
             emit Claimed(account, labubuAmount, labubuToU);
         }
 
