@@ -54,7 +54,7 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
     event DepositReward(uint amount);
     event SendReward(uint amount, address token);
     event Released(address account, uint amount);
-    event Claimed(address account, uint labubuAmount, uint usdtAmount);
+    event Claimed(address account, uint labubuAmount, uint usdtAmount, uint transferPtg);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -279,7 +279,7 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         if (labubuAmount > 0) {
             recoupments[account].claimed += labubuToU;
             IERC20(labubu).transfer(account, labubuAmount * transferPtg / 10);
-            emit Claimed(account, labubuAmount, labubuToU);
+            emit Claimed(account, labubuAmount, labubuToU, transferPtg);
         }
 
         return (labubuAmount, labubuToU);
