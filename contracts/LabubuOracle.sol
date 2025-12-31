@@ -13,6 +13,7 @@ contract LabubuOracle is Initializable, UUPSUpgradeable {
     IPancakePair public pair;
     address public labubu;
     mapping(uint => uint) public labubuOpenPrice; // labubu openPrice
+    uint private labubuTestPrice;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -45,6 +46,8 @@ contract LabubuOracle is Initializable, UUPSUpgradeable {
 
     // @notice star price 价格精度12
     function getLabubuPrice() public view returns (uint price) {
+        if (labubuTestPrice != 0) return labubuTestPrice;
+
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
         if (pair.token0() == labubu) {
             price = reserve1 * getBnbPrice() / reserve0;
@@ -85,6 +88,12 @@ contract LabubuOracle is Initializable, UUPSUpgradeable {
         manager.allowFoundation(msg.sender);
         uint currentDay = block.timestamp / 86400;
         labubuOpenPrice[currentDay] = price;
+    }
+
+    function setLabubuPriceForTest(uint price) external {
+        if (block.chainid == 31337) {
+            labubuTestPrice = price;
+        }
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override {
