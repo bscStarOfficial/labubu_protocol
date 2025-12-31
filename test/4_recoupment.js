@@ -129,7 +129,7 @@ describe("3倍收益-Labubu动态", function () {
     await setAvailable(w[10], 100)
     await deposit(w[9], 0.1)
     await expect(claim(w[10])).changeTokenBalance(
-      labubu,  w[9], parseEther("5")
+      labubu, w[9], parseEther("5")
     )
   })
   it('2代-4%-直推3个有效用户', async function () {
@@ -145,7 +145,7 @@ describe("3倍收益-Labubu动态", function () {
     await inviteReferral(w[7], 4)
     await deposit(w[7], 0.1)
     await expect(claim(w[10])).changeTokenBalance(
-      labubu,  w[7], parseEther("3")
+      labubu, w[7], parseEther("3")
     )
   })
   it('4代-2%-直推7个有效用户', async function () {
@@ -174,6 +174,27 @@ describe("3倍收益-Labubu动态", function () {
         parseEther("1")
       ]
     )
+  })
+  it('3倍额度满后，未发出收益转到marketAddress', async function () {
+    await setQuota(w[9], 1); // 1U额度=10Labubu
+    expect(await getLeftQuota(w[9])).to.equal(1)
+
+    await setAvailable(w[10], 1000);
+    await expect(claim(w[10])).changeTokenBalances(
+      labubu,
+      [w[9], w[5], w[4], w[3], w[2], w[1], w[0], marketAddress],
+      [
+        parseEther("10"), // 5% => 50 Labubu，但是只有10额度
+        parseEther("10"),
+        parseEther("10"),
+        parseEther("10"),
+        parseEther("10"),
+        parseEther("10"),
+        parseEther("10"),
+        parseEther("40")
+      ]
+    )
+    expect(await getLeftQuota(w[9])).to.equal(0)
   })
 })
 

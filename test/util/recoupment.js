@@ -66,9 +66,11 @@ async function availableReward(account) {
 }
 
 async function setQuota(account, quota) {
+  let res = await recoupments(account);
+  quota = new BigNumber(res.claimed).plus(quota).toNumber();
   await recoupment.setQuota(
     account.address,
-    new BigNumber(quota.toString()).multipliedBy(1e12).toFixed()
+    new BigNumber(quota.toString()).multipliedBy(1e18).toFixed()
   );
 }
 
