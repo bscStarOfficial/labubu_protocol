@@ -29,6 +29,15 @@ async function payees(account) {
   }
 }
 
+async function recoupments(account) {
+  let res = await recoupment.recoupments(account.address);
+  return {
+    deposit: toFNumber(res.deposit),
+    quota: toFNumber(res.quota),
+    claimed: toFNumber(res.claimed),
+  }
+}
+
 async function total() {
   let res = await recoupment.statistic();
   return toFNumber(res.total);
@@ -59,6 +68,15 @@ async function setQuota(account, quota) {
   await recoupment.setQuota(account.address, parseEther(quota.toString()));
 }
 
+async function setAvailable(account, available) {
+  await recoupment.setAvailableTest(account.address, parseEther(available.toString()));
+}
+
+async function getLeftQuota(account) {
+  let leftQuota = await recoupment.getLeftQuota(account.address);
+  return toFNumber(leftQuota);
+}
+
 module.exports = {
   recoupmentInit,
   sendTransaction,
@@ -69,5 +87,8 @@ module.exports = {
   payees,
   sendReward,
   total,
-  setQuota
+  setQuota,
+  recoupments,
+  getLeftQuota,
+  setAvailable
 }

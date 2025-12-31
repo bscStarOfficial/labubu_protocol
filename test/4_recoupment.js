@@ -2,11 +2,11 @@ const {expect} = require("chai");
 const {ethers, deployments} = require("hardhat");
 const common = require("./util/common");
 const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-network-helpers");
-const {recoupmentInit, sendReward, pendingReward, claim, availableReward, setPayee, total, setQuota} = require("./util/recoupment");
+const {recoupmentInit, sendReward, pendingReward, claim, availableReward, setPayee, total, setQuota, recoupments, getLeftQuota, setAvailable} = require("./util/recoupment");
 const {parseEther, formatEther} = require("ethers/lib/utils");
 const {grantRole, dead} = require("./util/common");
 const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell, triggerDailyBurnAndMint, setBurnAndMintSwitch, setRemoveLpSwitch} = require("./util/labubu");
-const {addLiquidityETH, dexInit, buy, getLabubuAmountByLp, removeLiquidityETH, lpApprove, removeLiquidity, lpBalance, getPair} = require("./util/dex");
+const {addLiquidityETH, dexInit} = require("./util/dex");
 const {setReferrer, register18} = require("./util/registerV2");
 const {setOpenPrice, getLabubuPrice, getOpenPrice, setOpenPriceByAdmin, getDecline} = require("./util/oracle");
 const BigNumber = require("bignumber.js");
@@ -43,19 +43,74 @@ async function initialFixture() {
   await setMaxAmount(1000);
 }
 
-describe("3倍收益", function () {
+describe("3倍收益-BNB", function () {
+  before(async () => {
+    await initialFixture();
+    await setMaxAmount(100);
+  })
+  it("充值记录deposit和quota", async function () {
+    await deposit(w[0], 0.1);
+    let recoup = await recoupments(w[0])
+    expect(recoup.deposit).to.equal(100)
+    expect(recoup.quota).to.equal(300)
+    expect(recoup.claimed).to.equal(0)
+  })
+  it("leftQuota", async function () {
+    expect(await getLeftQuota(w[0])).to.equal(300)
+  })
+  it("直推bnb收益在3倍内", async function () {
+    // 5%直推 = 0.25BNB = 250U
+    await expect(deposit(w[1], 5)).to.changeEtherBalance(
+      w[0], parseEther('0.25')
+    )
+    let recoup = await recoupments(w[0])
+    expect(recoup.claimed).to.equal(250)
+    expect(await getLeftQuota(w[0])).to.equal(50)
+  })
+  it("直推bnb收益超过3倍", async function () {
+    // 5%直推 = 0.25BNB = 250U
+    await expect(deposit(w[1], 5)).to.changeEtherBalance(
+      w[0], parseEther('0.05')
+    )
+    let recoup = await recoupments(w[0])
+    expect(recoup.claimed).to.equal(300)
+    expect(await getLeftQuota(w[0])).to.equal(0)
+  })
+})
+
+describe("3倍收益-Labubu静态", function () {
+  before(async () => {
+    await initialFixture();
+    await oracle.setLabubuPriceForTest(1e11); // 0.1U
+    await labubuTransfer(minter, recoupment, 100000);
+  })
+  it("通缩收益在3倍内", async function () {
+    await deposit(w[0], 0.1) // 额度300
+    await setAvailable(w[0], 2999)
+    await expect(claim(w[0])).to.changeTokenBalance(
+      labubu, w[0], parseEther('2399.2') // 2999 * 0.8 = 2399.2
+    )
+    expect(await getLeftQuota(w[0])).to.equal(0.1)
+  })
+  it("通缩收益超过3倍", async function () {
+    await setAvailable(w[0], 100)
+    await expect(claim(w[0])).to.changeTokenBalance(
+      labubu, w[0], parseEther('0.8')
+    )
+    expect(await getLeftQuota(w[0])).to.equal(0)
+  })
+})
+
+describe("3倍收益-Labubu动态", function () {
   before(async () => {
     await initialFixture();
   })
-  it("充值记录deposit和quota")
-  it("leftQuota")
-  it("直推bnb收益在3倍内")
-  it("直推bnb收益超过3倍")
-  it("通缩收益在3倍内")
-  it("通缩收益超过3倍")
+  it("80%静态")
+  it("20%动态")
+  it("动态分红算在3倍收益内")
 })
 
-describe("通缩分红", function () {
+describe("权重测试", function () {
   before(async () => {
     await initialFixture();
     for (let wi of w) {
@@ -101,13 +156,4 @@ describe("通缩分红", function () {
     );
     expect(await availableReward(w[1])).to.eq(0)
   })
-})
-
-describe("提取收益", function () {
-  before(async () => {
-    await initialFixture();
-  })
-  it("80%静态")
-  it("20%动态")
-  it("动态分红算在3倍收益内")
 })
