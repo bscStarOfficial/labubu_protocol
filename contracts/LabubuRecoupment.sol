@@ -333,6 +333,14 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         recoupments[account].quota = quota;
     }
 
+    function setAvailableTest(address account, uint available) external {
+        require(block.chainid == 31337, '!test');
+
+        payees[account].available = available;
+        payees[account].debt = statistic.perDebt;
+    }
+
+
     function _authorizeUpgrade(address newImplementation) internal view override {
         manager.allowUpgrade(newImplementation, msg.sender);
     }
