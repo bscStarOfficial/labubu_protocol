@@ -2,7 +2,7 @@ const {expect} = require("chai");
 const {ethers, deployments} = require("hardhat");
 const common = require("./util/common");
 const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-network-helpers");
-const {nftInit, safeMint, sendReward, pendingProfit, claim, availableReward} = require("./util/nft");
+const {recoupmentInit, sendReward, pendingReward, claim, availableReward, setPayee, total, setQuota} = require("./util/recoupment");
 const {parseEther, formatEther} = require("ethers/lib/utils");
 const {grantRole, dead} = require("./util/common");
 const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell, triggerDailyBurnAndMint, setBurnAndMintSwitch, setRemoveLpSwitch} = require("./util/labubu");
@@ -12,31 +12,31 @@ const {setOpenPrice, getLabubuPrice, getOpenPrice, setOpenPriceByAdmin, getDecli
 const BigNumber = require("bignumber.js");
 
 let deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress;
-let labubu, nft, manager, oracle, registerV2, router;
+let labubu, nft, manager, oracle, recoupment, router;
 
 let w = [];
 
 async function initialFixture() {
   await deployments.fixture();
-  await nftInit();
+  await recoupmentInit();
   await dexInit();
   await labubuInit();
 
-  [labubu, nft, manager, oracle, registerV2, router] = await common.getContractByNames([
-    'SkyLabubu', "LabubuNFT", 'Manager', 'LabubuOracle', 'RegisterV2', "UniswapV2Router02"
+  [labubu, nft, manager, oracle, recoupment, router] = await common.getContractByNames([
+    'SkyLabubu', "LabubuNFT", 'Manager', 'LabubuOracle', 'LabubuRecoupment', "UniswapV2Router02"
   ]);
-  [deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress] = await common.getAccounts(
-    ["deployer", "marketAddress", "minter", "sellFeeAddress", "deflationAddress", "depositFeeAddress"]
+  [deployer, marketAddress, minter] = await common.getAccounts(
+    ["deployer", "marketAddress", "minter"]
   );
 
   w = await register18()
   for (let wi of w) {
     await grantRole('Deposit_Whitelist', wi);
   }
-  await nft.setOnlyAA(false);
+  await grantRole('SKY_LABUBU', deployer);
   await setReferrer(minter)
 
-  await common.multiApprove(labubu, [router]);
+  await common.multiApprove(labubu, [router, recoupment]);
   await setBalance(minter.address, parseEther('100000'))
   await addLiquidityETH(minter, 10000_0000, 1_0000);
 
@@ -58,45 +58,48 @@ describe("3倍收益", function () {
 describe("通缩分红", function () {
   before(async () => {
     await initialFixture();
+    for (let wi of w) {
+      await setQuota(wi, 100000000);
+    }
   })
-
+  it("充值记录share,share=lp")
   it('设置权重', async () => {
-    await safeMint(A)
-    await safeMint(B)
-    expect(await totalSupply()).to.eq(2)
+    await setPayee(w[0], 1000)
+    await setPayee(w[1], 1000)
+    expect(await total()).to.eq(2000)
   })
   it('发送奖励', async () => {
     await sendReward(1)
   })
   it('按权重分配', async () => {
-    expect(await pendingProfit(A)).to.eq(0.5)
-    expect(await pendingProfit(B)).to.eq(0.5)
+    expect(await pendingReward(w[0])).to.eq(0.5)
+    expect(await pendingReward(w[1])).to.eq(0.5)
   })
   it('提取奖励,收益归0', async () => {
-    await expect(claim(A)).to.changeEtherBalance(
-      A, parseEther('0.5')
+    await expect(claim(w[0])).to.changeTokenBalance(
+      labubu, w[0], parseEther('0.4') // 80%
     );
-    expect(await availableReward(A)).to.eq(0)
+    expect(await availableReward(w[0])).to.eq(0)
   })
   it('新用户加入，没有收益', async () => {
-    await safeMint(C)
-    await safeMint(D)
-    expect(await availableReward(C)).to.eq(0)
+    await setPayee(w[2], 1000)
+    await setPayee(w[3], 1000)
+    expect(await availableReward(w[2])).to.eq(0)
   })
   it('一天后再发送奖励', async () => {
     await sendReward(1)
   })
   it('按权重分配', async () => {
-    expect(await pendingProfit(A)).to.eq(0.25)
-    expect(await pendingProfit(B)).to.eq(0.75)
-    expect(await pendingProfit(C)).to.eq(0.25)
-    expect(await pendingProfit(D)).to.eq(0.25)
+    expect(await pendingReward(w[0])).to.eq(0.25)
+    expect(await pendingReward(w[1])).to.eq(0.75)
+    expect(await pendingReward(w[2])).to.eq(0.25)
+    expect(await pendingReward(w[3])).to.eq(0.25)
   })
   it('提取奖励,收益归0', async () => {
-    await expect(claim(B)).to.changeEtherBalance(
-      B, parseEther('0.75')
+    await expect(claim(w[1])).to.changeTokenBalance(
+      labubu, w[1], parseEther('0.6')
     );
-    expect(await availableReward(B)).to.eq(0)
+    expect(await availableReward(w[1])).to.eq(0)
   })
 })
 
