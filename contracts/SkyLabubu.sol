@@ -166,6 +166,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             uint lpAmount = calLiquidityByLububu(amount);
             require(accountLpAmount[to] >= lpAmount, "!added lp amount");
             accountLpAmount[to] -= lpAmount;
+            recoupment.setPayee(to, accountLpAmount[to]);
 
             // 记录添加的lpAmount
             uint256 _addLiquidityUnlockTime = addLiquidityUnlockTime[to];
@@ -267,6 +268,9 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             block.timestamp + 600
         );
         accountLpAmount[recipient] += liquidity;
+
+        // 设置权重
+        recoupment.setPayee(recipient, accountLpAmount[recipient]);
 
         return liquidity;
     }

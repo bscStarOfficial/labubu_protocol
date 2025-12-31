@@ -166,7 +166,7 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         return validNum >= num;
     }
 
-    // TODO 是LP权重，还是按照deposit的BNB权重
+    // LP权重
     function setPayee(address account, uint shares) external {
         require(
             manager.hasRole(keccak256("SKY_LABUBU"), msg.sender),
@@ -196,15 +196,15 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         _release(account);
     }
 
-    function sendReward(uint amount) external {
-        _sendReward(amount);
-        IERC20(labubu).transferFrom(msg.sender, address(this), amount);
+    function sendReward(uint reward) external {
+        _sendReward(reward);
+        IERC20(labubu).transferFrom(msg.sender, address(this), reward);
     }
 
     function _sendReward(uint reward) internal {
         if (reward > 0 && statistic.total > 0) {
             unchecked {
-                statistic.perDebt += (reward / statistic.total).toUint128();
+                statistic.perDebt += reward * 1e12 / statistic.total;
             }
         }
     }
@@ -226,7 +226,7 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
 
         transferLabubuCheckQuota(account, totalReward * 8 / 10);
 
-        // TODO 20% 动态
+        // 20% 动态
         uint distributedReward;
         uint marketReward = totalReward * 2 / 10;
         (address[] memory _referrers, uint realCount) = registerV2.getReferrers(account, 10);
@@ -313,7 +313,7 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
     // @notice pending
     function pendingReward(address account) public view returns (uint) {
         Payee memory payee = payees[account];
-        return uint(statistic.perDebt - payee.debt) * payee.share;
+        return uint(statistic.perDebt - payee.debt) * payee.share / 1e12;
     }
 
     function availableReward(address account) public view returns (uint) {
