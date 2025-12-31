@@ -5,14 +5,14 @@ const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-networ
 const {nftInit} = require("./util/nft");
 const {parseEther, formatEther} = require("ethers/lib/utils");
 const {grantRole, dead} = require("./util/common");
-const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell, triggerDailyBurnAndMint, setBurnAndMintSwitch, setRemoveLpSwitch} = require("./util/labubu");
+const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell, triggerDailyBurnAndMint, setBurnAndMintSwitch, setRemoveLpSwitch, setDailBurnRate} = require("./util/labubu");
 const {addLiquidityETH, dexInit, buy, getLabubuAmountByLp, removeLiquidityETH, lpApprove, removeLiquidity, lpBalance, getPair} = require("./util/dex");
 const {setReferrer, register18} = require("./util/registerV2");
 const {setOpenPrice, getLabubuPrice, getOpenPrice, setOpenPriceByAdmin, getDecline} = require("./util/oracle");
 const BigNumber = require("bignumber.js");
 
 let deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress;
-let labubu, nft, manager, oracle, registerV2, router;
+let labubu, nft, manager, oracle, recoupment, registerV2, router;
 
 let w = [];
 
@@ -22,8 +22,8 @@ async function initialFixture() {
   await dexInit();
   await labubuInit();
 
-  [labubu, nft, manager, oracle, registerV2, router] = await common.getContractByNames([
-    'SkyLabubu', "LabubuNFT", 'Manager', 'LabubuOracle', 'RegisterV2', "UniswapV2Router02"
+  [labubu, nft, manager, oracle, recoupment, registerV2, router] = await common.getContractByNames([
+    'SkyLabubu', "LabubuNFT", 'Manager', 'LabubuOracle', 'LabubuRecoupment', 'RegisterV2', "UniswapV2Router02"
   ]);
   [deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress] = await common.getAccounts(
     ["deployer", "marketAddress", "minter", "sellFeeAddress", "deflationAddress", "depositFeeAddress"]
@@ -282,12 +282,14 @@ describe("通缩", function () {
   it("每天1%销毁", async function () {
     await setBurnAndMintSwitch(true);
     await time.increase(86400 * 4);
+    await setDailBurnRate([25, 5, 20])
     await expect(triggerDailyBurnAndMint()).to.changeTokenBalances(
       labubu,
-      [dead, deflationAddress, await getPair()],
+      [dead, deflationAddress, recoupment, await getPair()],
       [
         parseEther('1000000'),
-        parseEther('1000000'),
+        parseEther('200000'), // 1/5
+        parseEther('800000'), // 4/5
         parseEther('2000000').mul(-1)
       ]
     )

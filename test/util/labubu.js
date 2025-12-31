@@ -93,6 +93,10 @@ function setBurnAndMintSwitch(b) {
   return labubu.setBurnAndMintSwitch(b);
 }
 
+function setDailBurnRate(rate) {
+  return labubu.setDailBurnRate(rate);
+}
+
 function setRemoveLpSwitch(b) {
   return labubu.setRemoveLpSwitch(b);
 }
@@ -114,5 +118,6 @@ module.exports = {
   sell,
   triggerDailyBurnAndMint,
   setBurnAndMintSwitch,
-  setRemoveLpSwitch
+  setRemoveLpSwitch,
+  setDailBurnRate
 }
