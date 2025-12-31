@@ -327,6 +327,12 @@ contract LabubuRecoupment is Initializable, UUPSUpgradeable {
         oracle = _oracle;
     }
 
+    function setQuota(address account, uint quota) external {
+        manager.allowFoundation(msg.sender);
+
+        recoupments[account].quota = quota;
+    }
+
     function _authorizeUpgrade(address newImplementation) internal view override {
         manager.allowUpgrade(newImplementation, msg.sender);
     }
