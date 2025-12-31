@@ -2,6 +2,7 @@ const {parseEther, formatEther, parseUnits} = require("ethers/lib/utils");
 const {ethers} = require("hardhat");
 const common = require("./common");
 const {toFNumber} = require("./common");
+const BigNumber = require("bignumber.js");
 
 let recoupment;
 
@@ -65,7 +66,10 @@ async function availableReward(account) {
 }
 
 async function setQuota(account, quota) {
-  await recoupment.setQuota(account.address, parseEther(quota.toString()));
+  await recoupment.setQuota(
+    account.address,
+    new BigNumber(quota.toString()).multipliedBy(1e12).toFixed()
+  );
 }
 
 async function setAvailable(account, available) {
