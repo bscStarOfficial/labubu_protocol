@@ -2,7 +2,7 @@ const {expect} = require("chai");
 const {ethers, deployments} = require("hardhat");
 const common = require("./util/common");
 const {loadFixture, time, setBalance} = require("@nomicfoundation/hardhat-network-helpers");
-const {recoupmentInit, sendReward, pendingReward, claim, availableReward, setPayee, total, setQuota, recoupments, getLeftQuota, setAvailable, sendTransaction} = require("./util/recoupment");
+const {recoupmentInit, sendReward, pendingReward, claim, availableReward, setPayee, total, setQuota, recoupments, getLeftQuota, setAvailable, sendTransaction, payees} = require("./util/recoupment");
 const {parseEther, formatEther} = require("ethers/lib/utils");
 const {grantRole, dead} = require("./util/common");
 const {deposit, totalSupply, inviteReferral, labubuInit, setMaxAmount, labubuApprove, mockDeposit, accountLpAmount, labubuTransfer, sell, triggerDailyBurnAndMint, setBurnAndMintSwitch, setRemoveLpSwitch} = require("./util/labubu");
@@ -48,12 +48,16 @@ describe("3倍收益-BNB", function () {
     await initialFixture();
     await setMaxAmount(100);
   })
-  it("充值记录deposit和quota", async function () {
+  it("充值记录deposit、quota、share", async function () {
     await deposit(w[0], 0.1);
     let recoup = await recoupments(w[0])
     expect(recoup.deposit).to.equal(100)
     expect(recoup.quota).to.equal(300)
     expect(recoup.claimed).to.equal(0)
+
+    let payee = await payees(w[0]);
+    // console.log(payee.share);
+    expect(await accountLpAmount(w[0])).to.eq(payee.share)
   })
   it("leftQuota", async function () {
     expect(await getLeftQuota(w[0])).to.equal(300)
