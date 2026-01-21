@@ -73,7 +73,6 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
             deflationAddress,
             depositFeeAddress,
             nft.address,
-            manager.address,
             registerV2.address,
           ]
         }

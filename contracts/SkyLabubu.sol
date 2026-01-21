@@ -27,7 +27,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, AccessControlEnumerable
     ILabubuNFT public nft;
     ILabubuRecoupment public recoupment;
     ILabubuOracle public oracle;
-    IManager public manager;
     IRegisterV2 public registerV2;
 
     address public deflationAddress; // 每日1%销毁地址
@@ -66,7 +65,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, AccessControlEnumerable
         address _deflationAddress,
         address _depositFeeAddress,
         ILabubuNFT _nft,
-        IManager _manager,
         IRegisterV2 _registerV2
     ) public initializer {
         // bnbTokenAddress 必须是token0
@@ -84,7 +82,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, AccessControlEnumerable
         sellFeeAddress = _sellFeeAddress;
         deflationAddress = _deflationAddress;
         depositFeeAddress = _depositFeeAddress;
-        manager = _manager;
         registerV2 = _registerV2;
 
         pancakePair = IPancakeFactory(
