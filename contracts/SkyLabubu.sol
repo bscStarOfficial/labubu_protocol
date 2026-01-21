@@ -429,6 +429,10 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, AccessControlEnumerable
         dailyBurnRate = _burn;
     }
 
+    function upgradeTo(address newImplementation) external {
+        upgradeToAndCall(newImplementation, "");
+    }
+
     function _authorizeUpgrade(address newImplementation) internal view override onlyRole(UPGRADE) {
         require(
             keccak256(Address.functionStaticCall(newImplementation, abi.encodeWithSignature('proxiableUUID()'))) ==
