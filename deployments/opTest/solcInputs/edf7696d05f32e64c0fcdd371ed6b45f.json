@@ -1,0 +1,37 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/mock/WBNB.sol": {
+      "content": "pragma solidity ^0.4.24;\n\ncontract WBNB {\n    string public name = \"Wrapped BNB\";\n    string public symbol = \"WBNB\";\n    uint8  public decimals = 18;\n\n    event  Approval(address indexed src, address indexed guy, uint sad);\n    event  Transfer(address indexed src, address indexed dst, uint sad);\n    event  Deposit(address indexed dst, uint sad);\n    event  Withdrawal(address indexed src, uint sad);\n\n    uint256 private totalSupply_;\n    mapping(address => uint)                       private  balanceOf_;\n    mapping(address => mapping(address => uint))  private  allowance_;\n\n\n    function() public payable {\n        deposit();\n    }\n\n    function deposit() public payable {\n        balanceOf_[msg.sender] += msg.value;\n        totalSupply_ += msg.value;\n        emit Deposit(msg.sender, msg.value);\n    }\n\n    function withdraw(uint sad) public {\n        require(balanceOf_[msg.sender] >= sad, \"not enough balance\");\n        require(totalSupply_ >= sad, \"not enough totalSupply\");\n        balanceOf_[msg.sender] -= sad;\n        msg.sender.transfer(sad);\n        totalSupply_ -= sad;\n        emit Withdrawal(msg.sender, sad);\n    }\n\n     function totalSupply() public view returns (uint) {\n        return totalSupply_;\n    }\n\n    function balanceOf(address guy) public view returns (uint){\n        return balanceOf_[guy];\n    }\n\n    function allowance(address src, address guy) public view returns (uint){\n        return allowance_[src][guy];\n    }\n\n    function approve(address guy, uint sad) public returns (bool) {\n        allowance_[msg.sender][guy] = sad;\n        emit Approval(msg.sender, guy, sad);\n        return true;\n    }\n\n    function approve(address guy) public returns (bool) {\n        return approve(guy, uint(- 1));\n    }\n\n    function transfer(address dst, uint sad) public returns (bool) {\n        return transferFrom(msg.sender, dst, sad);\n    }\n\n    function transferFrom(address src, address dst, uint sad)\n    public\n    returns (bool)\n    {\n        require(balanceOf_[src] >= sad, \"src balance not enough\");\n\n        if (src != msg.sender && allowance_[src][msg.sender] != uint(- 1)) {\n            require(allowance_[src][msg.sender] >= sad, \"src allowance is not enough\");\n            allowance_[src][msg.sender] -= sad;\n        }\n\n        balanceOf_[src] -= sad;\n        balanceOf_[dst] += sad;\n\n        emit Transfer(src, dst, sad);\n\n        return true;\n    }\n}\n\n\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates",
+          "devdoc",
+          "userdoc"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}
