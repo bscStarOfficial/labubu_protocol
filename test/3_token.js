@@ -10,6 +10,7 @@ const {addLiquidityETH, dexInit, buy, getLabubuAmountByLp, removeLiquidityETH, l
 const {setReferrer, register18} = require("./util/registerV2");
 const {setOpenPrice, getLabubuPrice, getOpenPrice, setOpenPriceByAdmin, getDecline} = require("./util/oracle");
 const BigNumber = require("bignumber.js");
+const {utcZeroTime} = require("./util/time");
 
 let deployer, marketAddress, minter, sellFeeAddress, deflationAddress, depositFeeAddress;
 let labubu, nft, manager, oracle, recoupment, registerV2, router;
@@ -278,7 +279,31 @@ describe("通缩", function () {
   it("一次最多通缩2%\n\t每天1%分币\n\t每天1%销毁", async function () {
     await setBurnAndMintSwitch(true);
     await time.increase(86400 * 4);
-    await setDailBurnRate([25, 5, 20])
+    await setDailBurnRate([100, 20, 80])
+    await expect(triggerDailyBurnAndMint()).to.changeTokenBalances(
+      labubu,
+      [dead, deflationAddress, recoupment, await getPair()],
+      [
+        parseEther('1000000'),
+        parseEther('200000'), // 1/5
+        parseEther('800000'), // 4/5
+        parseEther('2000000').mul(-1)
+      ]
+    )
+  })
+
+  it("每天只能触发一次", async function () {
+    await time.increaseTo(await utcZeroTime() + 86400 - 10);
+    await expect(triggerDailyBurnAndMint()).to.changeTokenBalances(
+      labubu,
+      [dead, deflationAddress, recoupment, await getPair()],
+      [
+        0, 0, 0, 0
+      ]
+    )
+  })
+  it("下次0点继续通缩", async function () {
+    await time.increaseTo(await utcZeroTime() + 86400);
     await expect(triggerDailyBurnAndMint()).to.changeTokenBalances(
       labubu,
       [dead, deflationAddress, recoupment, await getPair()],
