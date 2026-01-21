@@ -14,10 +14,13 @@ import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "hardhat/console.sol";
+import {AccessControlEnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/extensions/AccessControlEnumerableUpgradeable.sol";
+//import "hardhat/console.sol";
 
-contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
+contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, AccessControlEnumerableUpgradeable, LabubuConst {
     using SafeMath for uint256;
+    bytes32 internal constant FOUNDATION = keccak256("FOUNDATION");
+    bytes32 internal constant UPGRADE = keccak256("UPGRADE");
 
     uint256 public maxAmount;
 
@@ -70,7 +73,11 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         require(address(this) > bnbTokenAddress, '!gt');
 
         __UUPSUpgradeable_init();
+        __AccessControlEnumerable_init();
         __ERC20_init("Sky Labubu", "SkyLabubu");
+        _grantRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _grantRole(UPGRADE, _msgSender());
+        _grantRole(FOUNDATION, _msgSender());
 
         nft = _nft;
 
@@ -223,11 +230,11 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     }
 
     function isTaxExempt(address account) public view returns (bool) {
-        return manager.hasRole(keccak256("TaxExempt"), account);
+        return hasRole(keccak256("TaxExempt"), account);
     }
 
     function isBlacklisted(address account) public view returns (bool) {
-        return manager.hasRole(keccak256("Blacklist"), account);
+        return hasRole(keccak256("Blacklist"), account);
     }
 
     function getUsdtValue(uint bnbAmount) internal view returns (uint) {
@@ -367,78 +374,61 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
         IPancakePair(pancakePair).sync();
     }
 
-    function setBurnAndMintSwitch(bool _switch) external {
-        manager.allowFoundation(msg.sender);
+    function setBurnAndMintSwitch(bool _switch) external onlyRole(FOUNDATION) {
         burnAndMintSwitch = _switch;
     }
 
-    function setRemoveLpSwitch(bool _switch) external {
-        manager.allowFoundation(msg.sender);
+    function setRemoveLpSwitch(bool _switch) external onlyRole(FOUNDATION) {
         removeLpSwitch = _switch;
     }
 
-    function setMintNFTAddress(ILabubuNFT _nft) external {
-        manager.allowFoundation(msg.sender);
+    function setMintNFTAddress(ILabubuNFT _nft) external onlyRole(FOUNDATION) {
         nft = _nft;
     }
 
-    function setDeflationAddress(address _deflationAddress) external {
-        manager.allowFoundation(msg.sender);
+    function setDeflationAddress(address _deflationAddress) external onlyRole(FOUNDATION) {
         deflationAddress = _deflationAddress;
     }
 
-    function setMaxAmount(uint256 amount) external {
-        manager.allowFoundation(msg.sender);
-
+    function setMaxAmount(uint256 amount) external onlyRole(FOUNDATION) {
         maxAmount = amount;
     }
 
-    function setOracle(ILabubuOracle _oracle) external {
-        manager.allowFoundation(msg.sender);
-
+    function setOracle(ILabubuOracle _oracle) external onlyRole(FOUNDATION) {
         oracle = _oracle;
     }
 
-    function setRecoupment(ILabubuRecoupment _recoupment) external {
-        manager.allowFoundation(msg.sender);
+    function setRecoupment(ILabubuRecoupment _recoupment) external onlyRole(FOUNDATION) {
         _approve(address(this), address(_recoupment), ~uint256(0));
 
         recoupment = _recoupment;
     }
 
-    function withdrawEth(address recipient, uint256 value) external {
-        manager.allowFoundation(msg.sender);
-
+    function withdrawEth(address recipient, uint256 value) external onlyRole(FOUNDATION) {
         require(address(this).balance >= value, "Insufficient BNB");
         safeTransferETH(recipient, value);
 
         emit WithdrawalToken(address(0x0), recipient, value);
     }
 
-    function withdrawalToken(address token, address receiver, uint amount) external {
-        manager.allowFoundation(msg.sender);
-
+    function withdrawalToken(address token, address receiver, uint amount) external onlyRole(FOUNDATION) {
         IERC20(token).transfer(receiver, amount);
         emit WithdrawalToken(token, receiver, amount);
     }
 
-    function setRemoveLpBurnRate(uint16[] calldata _burn) external {
-        manager.allowFoundation(msg.sender);
-
+    function setRemoveLpBurnRate(uint16[] calldata _burn) external onlyRole(FOUNDATION) {
         delete removeLpBurnRate; // 清空旧数据
         for (uint i = 0; i < _burn.length; i++) {
             removeLpBurnRate.push(_burn[i]);
         }
     }
 
-    function setDailBurnRate(uint16[3] calldata _burn) external {
-        manager.allowFoundation(msg.sender);
+    function setDailBurnRate(uint16[3] calldata _burn) external onlyRole(FOUNDATION) {
         require(_burn[0] + _burn[1] + _burn[2] == 200, "!200");
 
         dailyBurnRate = _burn;
     }
 
-    function _authorizeUpgrade(address newImplementation) internal view override {
-        manager.allowUpgrade(newImplementation, msg.sender);
+    function _authorizeUpgrade(address newImplementation) internal view override onlyRole(UPGRADE) {
     }
 }
