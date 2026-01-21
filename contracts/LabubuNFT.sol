@@ -99,17 +99,18 @@ contract LabubuNFT is Initializable, ERC721Upgradeable, ERC721EnumerableUpgradea
             "!labubu"
         );
 
-        uint256 day = block.timestamp / 86400;
-        dailyAmount[day] += value;
-        require(dailyAmount[day] <= maxDailyAmount, "!maxDailyAmount");
-
         if (manager.hasRole(keccak256('Deposit_Whitelist'), account)) return;
+
         if (onlyAA) require(isContract(account), 'onlyAA');
 
         if (depositCheckTokenId) {
             require(balanceOf(account) > 0, "balance 0");
             require(tokenOfOwnerByIndex(account, 0) <= maxDepositId, "!maxDepositId");
         }
+
+        uint256 day = block.timestamp / 86400;
+        dailyAmount[day] += value;
+        require(dailyAmount[day] <= maxDailyAmount, "!maxDailyAmount");
     }
 
     function fistTokenId(address account) external view returns (uint) {
