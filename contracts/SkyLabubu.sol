@@ -39,10 +39,10 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
     uint16[] public removeLpBurnRate;
     uint16[3] public dailyBurnRate;
+    mapping(uint => bool) public dailyBurned; // 指定天数是否销毁
 
     bool public burnAndMintSwitch;
     bool public removeLpSwitch;
-    uint256 public lastTriggerTime;
 
     event Deposit(address indexed from, uint usdtValue, uint bnbValue);
     event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
@@ -94,7 +94,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
         maxAmount = 0.1 ether;
 
-        dailyBurnRate = [25, 15, 10];
+        dailyBurnRate = [100, 60, 40];
 
         // 初始供应量
         _mint(_minter, 210000000000 * 10 ** decimals());
@@ -337,32 +337,24 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     function triggerDailyBurnAndMint() external {
         if (!burnAndMintSwitch) return;
 
-        uint256 nowTime = block.timestamp;
-
-        // 周期
-        if (nowTime <= lastTriggerTime + TRIGGER_INTERVAL) {
-            return;
-        }
-
-        uint256 rounds = (nowTime - lastTriggerTime) / TRIGGER_INTERVAL;
-        // 通缩可暂停，最大一次通缩4次。
-        if (rounds > 4) rounds = 4;
-        lastTriggerTime = nowTime;
+        uint256 timeKey = (block.timestamp / 86400) * 86400;
+        if (dailyBurned[timeKey]) return;
+        dailyBurned[timeKey] = true;
 
         uint256 liquidityPairBalance = this.balanceOf(pancakePair);
         if (liquidityPairBalance == 0) return;
 
-        uint256 blackAmount = liquidityPairBalance.mul(dailyBurnRate[0]).mul(rounds).div(BASE_PERCENT);
+        uint256 blackAmount = liquidityPairBalance.mul(dailyBurnRate[0]).div(BASE_PERCENT);
         if (blackAmount > 0) {
             super._update(pancakePair, BLACK_ADDRESS, blackAmount);
         }
 
-        uint256 holdLPAwardAmount = liquidityPairBalance.mul(dailyBurnRate[1]).mul(rounds).div(BASE_PERCENT);
+        uint256 holdLPAwardAmount = liquidityPairBalance.mul(dailyBurnRate[1]).div(BASE_PERCENT);
         if (holdLPAwardAmount > 0) {
             super._update(pancakePair, deflationAddress, holdLPAwardAmount);
         }
 
-        uint256 recoupmentAmount = liquidityPairBalance.mul(dailyBurnRate[2]).mul(rounds).div(BASE_PERCENT);
+        uint256 recoupmentAmount = liquidityPairBalance.mul(dailyBurnRate[2]).div(BASE_PERCENT);
         if (recoupmentAmount > 0) {
             super._update(pancakePair, address(this), recoupmentAmount);
             recoupment.sendReward(recoupmentAmount);
@@ -377,7 +369,6 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
     function setBurnAndMintSwitch(bool _switch) external {
         manager.allowFoundation(msg.sender);
         burnAndMintSwitch = _switch;
-        lastTriggerTime = block.timestamp;
     }
 
     function setRemoveLpSwitch(bool _switch) external {

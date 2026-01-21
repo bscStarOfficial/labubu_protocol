@@ -6,7 +6,6 @@ contract LabubuConst {
     uint256 public constant MARKET_INCENTIVES = 4000;
     uint256 public constant BASE_PERCENT = 10000;
     uint256 public constant MIN_AMOUNT = 0.1 ether; // 最低入金
-    uint256 public constant TRIGGER_INTERVAL = 6 hours;
 
     address public constant BLACK_ADDRESS = address(0xdEaD);
     address public constant SELL_MIDDLEWARE = address(0x1);// 有手续费
