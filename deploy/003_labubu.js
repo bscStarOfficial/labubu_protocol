@@ -59,6 +59,14 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
     marketAddress = '0x1074AAD70bbb235B670BA3391975e245624426c1';
   }
 
+  if (chainId === "5611") {
+    minter = deployer;
+    sellFeeAddress = deployer;
+    deflationAddress = deployer;
+    depositFeeAddress = deployer;
+    marketAddress = deployer;
+  }
+
   await deploy('SkyLabubu', {
     from: deployer,
     args: [wbnb, router],
