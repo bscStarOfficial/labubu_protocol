@@ -22,6 +22,8 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, AccessControlEnumerable
     using SafeMath for uint256;
     bytes32 internal constant FOUNDATION = keccak256("FOUNDATION");
     bytes32 internal constant UPGRADE = keccak256("UPGRADE");
+    // keccak-256 hash of "eip1967.proxy.implementation" subtracted by 1.
+    bytes32 internal constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
     uint256 public maxAmount;
 
@@ -430,7 +432,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, AccessControlEnumerable
     function _authorizeUpgrade(address newImplementation) internal view override onlyRole(UPGRADE) {
         require(
             keccak256(Address.functionStaticCall(newImplementation, abi.encodeWithSignature('proxiableUUID()'))) ==
-            ERC1967Utils.IMPLEMENTATION_SLOT,
+            IMPLEMENTATION_SLOT,
             "!UUID"
         );
     }
