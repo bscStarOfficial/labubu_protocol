@@ -321,6 +321,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             address(recoupment) != address(0), "!0"
         );
         // 推荐关系 20%
+        // !!!这里的20%不能随意修改，recoupment合约value * 5，计算投入
         uint256 referralValue = _totalAmount.mul(2000).div(BASE_PERCENT);
         recoupment.distributeReferralReward{value: referralValue}(user);
 
