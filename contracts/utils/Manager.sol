@@ -33,7 +33,7 @@ contract Manager is Initializable, UUPSUpgradeable, AccessControlEnumerableUpgra
         require(hasRole(UPGRADE, sender), "!role");
         require(
             keccak256(Address.functionStaticCall(newImplementation, abi.encodeWithSignature('proxiableUUID()'))) ==
-            ERC1967Utils.IMPLEMENTATION_SLOT,
+            keccak256(abi.encodePacked(ERC1967Utils.IMPLEMENTATION_SLOT)),
             "!UUID"
         );
     }
