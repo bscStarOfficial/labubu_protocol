@@ -51,6 +51,14 @@ module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAc
     await tx.wait()
   }
 
+  if (chainId === "56") {
+    minter = '0xcBcd66D419a0599445fe1978Cf8cb448929d7D56';
+    sellFeeAddress = '0xC33b69d6ff0a4A4695Ab954f98a4e041656016Da';
+    deflationAddress = '0x3B8149d3D0dC633e8519bAA5258F843Bf16cc20D';
+    depositFeeAddress = '0x690542DfdCd58c2ae7d2169954e51D345c6F0DCf';
+    marketAddress = '0x1074AAD70bbb235B670BA3391975e245624426c1';
+  }
+
   await deploy('SkyLabubu', {
     from: deployer,
     args: [wbnb, router],
