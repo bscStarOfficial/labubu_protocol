@@ -10,6 +10,7 @@ import "./interfaces/IRegisterV2.sol";
 import "./interfaces/IWETH.sol";
 import "./lib/LabubuConst.sol";
 import "./lib/SafeMath.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -427,5 +428,10 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, AccessControlEnumerable
     }
 
     function _authorizeUpgrade(address newImplementation) internal view override onlyRole(UPGRADE) {
+        require(
+            keccak256(Address.functionStaticCall(newImplementation, abi.encodeWithSignature('proxiableUUID()'))) ==
+            ERC1967Utils.IMPLEMENTATION_SLOT,
+            "!UUID"
+        );
     }
 }
