@@ -304,14 +304,15 @@ describe("通缩", function () {
   })
   it("下次0点继续通缩", async function () {
     await time.increaseTo(await utcZeroTime() + 86400);
+    let total = 10000_0000 - 200_0000
     await expect(triggerDailyBurnAndMint()).to.changeTokenBalances(
       labubu,
       [dead, deflationAddress, recoupment, await getPair()],
       [
-        parseEther('1000000'),
-        parseEther('200000'), // 1/5
-        parseEther('800000'), // 4/5
-        parseEther('2000000').mul(-1)
+        parseEther('980000'),
+        parseEther('196000'), // 1/5
+        parseEther('784000'), // 4/5
+        parseEther('1960000').mul(-1)
       ]
     )
   })
