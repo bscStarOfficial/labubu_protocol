@@ -94,7 +94,8 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
         maxAmount = 0.1 ether;
 
-        dailyBurnRate = [100, 60, 40];
+        // 0销毁、1项目方、2分红
+        dailyBurnRate = [100, 0, 100];
 
         // 初始供应量
         _mint(_minter, 210000000000 * 10 ** decimals());
