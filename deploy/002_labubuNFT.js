@@ -1,7 +1,5 @@
 const {ethers} = require("hardhat");
-const {parseEther, parseUnits, keccak256, toUtf8Bytes} = require("ethers/lib/utils");
-const accounts = require("../config/account")
-module.exports = async ({getNamedAccounts, deployments, getChainId, getUnnamedAccounts}) => {
+module.exports = async ({getNamedAccounts, deployments, getChainId}) => {
   const {deploy} = deployments;
   let {deployer, reserve} = await getNamedAccounts();
   const chainId = await getChainId()
