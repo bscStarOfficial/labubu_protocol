@@ -46,7 +46,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
 
     event Deposit(address indexed from, uint usdtValue, uint bnbValue);
     event WithdrawalToken(address indexed token, address indexed receiver, uint indexed amount);
-    event TriggerDailyBurnAndMint(uint256 indexed liquidityPairBalance, uint256 indexed burnAmount, uint256 indexed holdLPAwardAmount, uint256 rounds);
+    event TriggerDailyBurnAndMint(uint256 indexed liquidityPairBalance, uint256 indexed burnAmount, uint256 indexed holdLPAwardAmount);
     event LpRedeemed(address indexed user, uint labubuPrice, uint backAmount, uint burnAmount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -360,7 +360,7 @@ contract SkyLabubu is ERC20Upgradeable, UUPSUpgradeable, LabubuConst {
             recoupment.sendReward(recoupmentAmount);
         }
 
-        emit TriggerDailyBurnAndMint(liquidityPairBalance, blackAmount, holdLPAwardAmount, rounds);
+        emit TriggerDailyBurnAndMint(liquidityPairBalance, blackAmount, holdLPAwardAmount);
 
         // 最后同步一次 Pair 状态
         IPancakePair(pancakePair).sync();
