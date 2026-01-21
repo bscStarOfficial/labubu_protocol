@@ -114,6 +114,7 @@ describe("限制", function () {
     await canDeposit(B, 0);
   })
   it('日入金总量限制', async () => {
+    await setMaxDepositId(2)
     await expect(canDeposit(C, 100.1)).to.revertedWith('!maxDailyAmount')
   })
   it('EOA地址限制', async function () {
@@ -124,5 +125,4 @@ describe("限制", function () {
     await grantRole('Deposit_Whitelist', C);
     await canDeposit(C, 0.1);
   })
-
 })
