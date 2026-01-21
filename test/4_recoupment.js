@@ -115,8 +115,6 @@ describe("3倍收益-Labubu动态", function () {
       await setQuota(wi, 300); // 300U额度
     }
   })
-  it("20%动态");
-  it("动态分红算在3倍收益内");
   it('布道奖励发不完，资金回到marketAddress', async function () {
     await setAvailable(w[10], 100)
     await expect(claim(w[10])).changeTokenBalance(
@@ -129,7 +127,7 @@ describe("3倍收益-Labubu动态", function () {
       labubu, w[9], 0
     )
   })
-  it('1代-5%-直推1个有效用户', async function () {
+  it('20%动态\n\t1代-5%-直推1个有效用户', async function () {
     await setAvailable(w[10], 100)
     await deposit(w[9], 0.1)
     await expect(claim(w[10])).changeTokenBalance(
@@ -198,6 +196,8 @@ describe("3倍收益-Labubu动态", function () {
         parseEther("40")
       ]
     )
+  })
+  it('动态分红算在3倍收益内', async function () {
     expect(await getLeftQuota(w[9])).to.equal(0)
   })
 })
