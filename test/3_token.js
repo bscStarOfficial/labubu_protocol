@@ -181,11 +181,8 @@ describe("入金", function () {
       await expect(deposit(w[0], 0.099)).to.revertedWith('!value')
     })
     // bsc测试
-    it('60%用于组建流动性池(LP)', async function () {
-
-    })
-    it('10%进入拉盘合约助涨币价')
-    it('10%用于NFT节点分红', async function () {
+    it('60%用于组建流动性池(LP)')
+    it('10%进入拉盘合约助涨币价 & 10%用于NFT节点分红', async function () {
       await expect(deposit(w[3], 0.1)).to.changeEtherBalances(
         [depositFeeAddress, nft],
         [parseEther('0.01'), parseEther('0.01')]
@@ -277,9 +274,8 @@ describe("通缩", function () {
       [0, 0]
     )
   })
-  it("一次最多通缩2%")
-  it("每天1%分币")
-  it("每天1%销毁", async function () {
+
+  it("一次最多通缩2%\n\t每天1%分币\n\t每天1%销毁", async function () {
     await setBurnAndMintSwitch(true);
     await time.increase(86400 * 4);
     await setDailBurnRate([25, 5, 20])
