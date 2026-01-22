@@ -50,9 +50,9 @@ contract LabubuOracle is Initializable, UUPSUpgradeable {
 
         (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
         if (pair.token0() == labubu) {
-            price = reserve1 * getBnbPrice() / reserve0;
+            price = uint(reserve1) * getBnbPrice() / uint(reserve0);
         } else {
-            price = reserve0 * getBnbPrice() / reserve1;
+            price = uint(reserve0) * getBnbPrice() / uint(reserve1);
         }
     }
 
@@ -61,7 +61,7 @@ contract LabubuOracle is Initializable, UUPSUpgradeable {
         if (block.chainid != 56) price = 1000e12;
         else {
             (uint112 reserve0, uint112 reserve1,) = IPancakePair(0x16b9a82891338f9bA80E2D6970FddA79D1eb0daE).getReserves();
-            price = reserve0 * 1e12 / reserve1;
+            price = uint(reserve0) * 1e12 / uint(reserve1);
         }
     }
 

@@ -35,8 +35,21 @@ async function register18() {
   return wallets;
 }
 
+async function register1() {
+  let registerV2 = await ethers.getContract("RegisterV2");
+  let root = await registerV2.ROOT_USER();
+  let provider = ethers.provider;
+
+  let wallet = Wallet.createRandom().connect(provider);
+  await setBalance(wallet.address, parseEther('10000'));
+  await registerV2.setReferrer(wallet.address, root);
+
+  return wallet;
+}
+
 module.exports = {
   setReferrer,
   referrer,
-  register18
+  register18,
+  register1
 }
