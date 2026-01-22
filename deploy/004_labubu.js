@@ -13,6 +13,7 @@ module.exports = async ({getNamedAccounts, deployments, getChainId}) => {
   let registerV2 = await ethers.getContract("RegisterV2");
 
   while (true) {
+    if (chainId !== "31337") return;
     // 获取即将部署点合约地址, +1因为先部署imp
     let nonce = await ethers.provider.getTransactionCount(deployer) + 1
     let addressPredict = getContractAddress({
